@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title if page_title is defined else 'ホーム' }} | {{ app_name if app_name is defined else 'ショクチョー！' }}</title>
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --accent-color: #ff9900;
+            --text-color: #2c3e50;
+            --sidebar-width: 280px;
+            --dark-bg: #212529;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+
+        /* サイドバー（デスクトップ） */
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            padding: 1rem;
+            background-color: var(--dark-bg) !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,.3) !important;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform .25s ease;
+        }
+        .sidebar-header { padding-top: 1rem; padding-bottom: 1rem; margin-bottom: 1rem; text-align:center; }
+        .sidebar .nav-link { color: #ced4da !important; transition: background-color 0.3s, color 0.3s; padding: 0.5rem 1rem; }
+        .sidebar .nav-link:hover { color: white !important; background-color: #343a40; }
+        .sidebar .nav-link.active { color: var(--accent-color) !important; background-color: #495057 !important; border-left: 3px solid var(--accent-color); font-weight: 700; }
+        .sidebar .collapse .nav-link { padding-left: 1.5rem; }
+
+        /* メインコンテンツ */
+        .main-content {
+            padding-left: calc(var(--sidebar-width) + 1.5rem);
+            padding-right: 1.5rem;
+            padding-top: 1.5rem;
+            padding-bottom: 5rem; /* フッターを考慮してパディングを増加 */
+            min-height: 100vh;
+            background-color: #f7f7f7;
+            transition: margin-left .25s ease;
+        }
+        .main-content h1 { color: var(--text-color); border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; }
+        .header-logo { max-height: 50px; width: auto; margin-right: 15px; }
+
+        /* ホーム：固定グリッド（2行 x 3列） */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: .5rem;
+        }
+        @media (max-width: 992px) {
+            .app-grid { grid-template-columns: repeat(2, 1fr); } /* タブレット～ */
+        }
+        @media (max-width: 576px) {
+            .app-grid { grid-template-columns: 1fr; } /* スマホ */
+        }
+
+        .app-tile {
+            border-radius: 12px;
+            background: linear-gradient(180deg,#ffffff,#f1f5f9);
+            padding: 1.2rem;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+            transition: transform .18s ease, box-shadow .18s ease;
+            text-decoration: none;
+            color: inherit;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            min-height: 160px;
+        }
+        .app-tile:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(2,6,23,0.09); }
+        .app-icon { font-size: 2.4rem; margin-bottom: 0.6rem; width:72px; height:72px; display:flex; align-items:center; justify-content:center; border-radius:14px; color:white; box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
+
+        /* 金属感のあるグラデーション色 */
+        .metal-steel { background: linear-gradient(135deg,#4b5563 0%, #9aa6b2 100%); }
+        .metal-bronze { background: linear-gradient(135deg,#6b4a2e 0%, #b08d57 100%); }
+        .metal-copper { background: linear-gradient(135deg,#7b3f27 0%, #c9744b 100%); }
+        .metal-silver { background: linear-gradient(135deg,#bfc7cc 0%, #e6eef3 100%); color:#0f172a; }
+        .metal-gunmetal { background: linear-gradient(135deg,#2b3338 0%, #50606a 100%); }
+        .metal-gold { background: linear-gradient(135deg,#b8860b 0%, #ffd54f 100%); color:#0f172a; }
+
+        .app-tile-title { font-weight:700; margin-bottom: .25rem; }
+        .app-tile-desc { color: var(--secondary-color); font-size: .9rem; }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            background-color: #e9ecef;
+            color: #6c757d;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid #dee2e6;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* 【★修正】フッターのレスポンシブ対応 */
+        @media (max-width: 992px) {
+            .footer { left: 0; }
+        }
+
+        /* ホームボタン（全ページ共通） */
+        .home-cta {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 18px;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.5);
+            backdrop-filter: blur(6px);
+            border-radius: 14px;
+            padding: 6px 12px;
+            box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+            transition: transform .12s ease, box-shadow .12s ease;
+            text-decoration: none;
+        }
+        .home-cta:active { transform: translateX(-50%) translateY(1px); }
+        .home-cta:hover { transform: translateX(-50%) translateY(-3px); box-shadow: 0 12px 32px rgba(2,6,23,0.12); }
+
+        .home-cta .home-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 12rem;
+            background: linear-gradient(135deg,#ffffff,#c7d2da);
+            display:flex; align-items:center; justify-content:center;
+            box-shadow: inset 0 -6px 12px rgba(0,0,0,0.06);
+            margin-left:6px;
+            color: #0f172a;
+            font-size: 1.4rem;
+        }
+
+        /* トグル用オーバーレイ */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 1100;
+            opacity: 0;
+            transition: opacity .2s ease;
+        }
+        .sidebar-overlay.open { display:block; opacity:1; }
+
+        /* 小画面で折りたたみ動作 */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-110%);
+                width: calc(var(--sidebar-width) - 40px);
+                top: 56px;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { padding-left: 1.5rem; margin-left: 0; }
+            /* トグルボタン */
+            #sidebarToggle {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 1300;
+                border-radius: 10px;
+                padding: .45rem .5rem;
+                background: rgba(255,255,255,0.92);
+                box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+                border: none;
+            }
+            #sidebarToggle:active { transform: translateY(1px); }
+            #sidebarToggle i { font-size: 1.05rem; } /* アイコンサイズをCSSに移動 */
+        }
+
+        @media (max-width: 576px) {
+            #sidebarToggle { top:8px; left:8px; }
+            .sidebar { width: calc(var(--sidebar-width) * 0.85); }
+        }
+
+        /* ヘッダ／サイドバーのアプリ名表示調整 */
+        .brand-block { display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+        .brand-block .app-subtitle {
+            font-size:0.85rem;
+            color: #cfd8dc;
+            line-height:1;
+        }
+        .brand-block .app-title {
+            font-size:1.45rem;
+            font-weight:800;
+            color: #ffffff;
+            line-height:1;
+            margin-top:2px;
+        }
+
+        /* メイン上部のブランド（ロゴ＋タイトル） */
+        .page-brand {
+            display:flex; align-items:center; gap:0.75rem;
+        }
+        .page-brand .brand-text {
+            display:flex; flex-direction:column; align-items:flex-start;
+        }
+        .page-brand .brand-subtitle {
+            font-size:0.9rem; color:#6b7280; margin-bottom:2px;
+        }
+        .page-brand .brand-title {
+            font-size:1.6rem; font-weight:900; color:var(--text-color);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% set nav = nav if nav is defined else {} %}
+    {% set current_app = current_app if current_app is defined else '' %}
+    {% set page_title = page_title if page_title is defined else 'ホーム' %}
+
+    <button id="sidebarToggle" class="btn btn-light d-lg-none" aria-label="メニューを開く">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <div class="d-flex">
+        <nav class="sidebar" id="mainSidebar" aria-hidden="false">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='img/logo2.png') }}" alt="ロゴ" class="header-logo mb-2">
+                <div class="brand-block">
+                    <div class="app-subtitle">{{ app_subtitle if app_subtitle is defined else '全ての建設従事者向け便利サイト' }}</div>
+                    <div class="app-title">{{ app_title if app_title is defined else 'ITショクチョー！' }}</div>
+                </div>
+                <small style="color:#ced4da; margin-top:6px;">メニュー</small>
+            </div>
+
+            <ul class="nav flex-column">
+                {% for key, item in nav.items() %}
+                    {% set is_external = item.get('external', False) %}
+                    {% set children = item.get('children', []) %}
+                    {% if is_external %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ item['url'] }}" target="_blank" rel="noopener noreferrer">
+                                {{ item['name'] }} <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        </li>
+                    {% elif children %}
+                        {% set is_open = false %}
+                        {% for c in children %}
+                            {% if c['id'] == current_app %}
+                                {% set is_open = true %}
+                            {% endif %}
+                        {% endfor %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if is_open %}active{% endif %}" data-bs-toggle="collapse"
+                               href="#{{ key }}Submenu" role="button"
+                               aria-expanded="{{ 'true' if is_open else 'false' }}"
+                               aria-controls="{{ key }}Submenu">
+                                {{ item['name'] }}
+                            </a>
+
+                            <div class="collapse {% if is_open %}show{% endif %}" id="{{ key }}Submenu">
+                                <ul class="nav flex-column ms-3">
+                                    {% for child in children %}
+                                        <li class="nav-item">
+                                            <a class="nav-link {% if current_app == child['id'] %}active{% endif %}" href="{{ url_for(child['url']) }}">
+                                                {{ child['name'] }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if current_app == key %}active{% endif %}" href="{{ url_for(item['url']) }}">{{ item['name'] }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <main class="main-content" id="mainContent">
+            <header class="mb-3">
+                <div class="page-brand">
+                    <img src="{{ url_for('static', filename='img/logo2.png') }}" alt="ロゴ" class="header-logo rounded" style="max-height:48px;">
+                    <div class="brand-text">
+                        <div class="brand-subtitle">{{ app_subtitle if app_subtitle is defined else '全ての建設従事者向け便利サイト' }}</div>
+                        <div class="brand-title">{{ app_title if app_title is defined else 'ITショクチョー！' }}</div>
+                    </div>
+                </div>
+                <h1 class="mt-3" style="font-size:1.25rem; margin-bottom:0.75rem;">{{ page_title }}</h1>
+            </header>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+    <a href="{{ url_for('index') }}" class="home-cta" aria-label="ホームに戻る">
+        <div style="font-weight:600; color:#0f172a; padding-left:8px;">Home</div>
+        <div class="home-circle"><i class="bi bi-house-door-fill"></i></div>
+    </a>
+
+    <footer class="footer">
+        <div></div>
+        <div class="text-muted">Mr.Bigstone による IdeaLabの一環で作成されました</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function(){
+            const btn = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            // 初期状態を確実にリセット
+            function resetOverlay() {
+                overlay.style.display = 'none';
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden','true');
+            }
+            resetOverlay();
+
+            function openSidebar(){
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+                // 少し遅延してトランジションを発火
+                requestAnimationFrame(()=> {
+                    overlay.style.opacity = '1';
+                    overlay.style.pointerEvents = 'auto';
+                    overlay.classList.add('open');
+                    overlay.setAttribute('aria-hidden','false');
+                });
+            }
+            function closeSidebar(){
+                sidebar.classList.remove('open');
+                overlay.style.opacity = '0';
+                overlay.style.pointerEvents = 'none';
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden','true');
+                // CSSトランジション後に display を none に
+                setTimeout(()=> {
+                    if (!overlay.classList.contains('open')) overlay.style.display = 'none';
+                }, 220);
+            }
+
+            if(btn){
+                btn.addEventListener('click', function(e){
+                    if(sidebar.classList.contains('open')) closeSidebar();
+                    else openSidebar();
+                });
+            }
+            if(overlay){
+                overlay.addEventListener('click', closeSidebar);
+            }
+            // サイドバー内リンクを押したら閉じる（モバイル時）。ナビゲートを妨げない。
+            document.querySelectorAll('.sidebar .nav-link').forEach(link=>{
+                link.addEventListener('click', function(){
+                    if(window.innerWidth <= 992) {
+                        // 少し遅延して閉じる（遷移が始まる前に overlay が残らないように）
+                        setTimeout(closeSidebar, 50);
+                    }
+                }, {passive:true});
+            });
+            // 画面リサイズ時にサイドバー状態をリセット
+            window.addEventListener('resize', function(){
+                if(window.innerWidth > 992){
+                    sidebar.classList.remove('open');
+                    resetOverlay();
+                }
+            });
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

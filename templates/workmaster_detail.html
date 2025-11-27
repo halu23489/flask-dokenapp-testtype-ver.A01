@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-md-10">
+    <form method="POST" action="{{ url_for('workmaster_detail') }}">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white"><i class="bi bi-list-check me-2"></i>歩掛マスター：詳細内容入力</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">材料リスト</label>
+            <div id="material-list">
+              <div class="input-group mb-2">
+                <input type="text" class="form-control" name="material_name[]" placeholder="材料名" required>
+                <input type="number" class="form-control" name="material_qty[]" placeholder="数量" min="0" step="0.01" required>
+                <button type="button" class="btn btn-outline-danger remove-material">削除</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" id="add-material">材料追加</button>
+          </div>
+          <div class="mb-3">
+            <label for="heavy_machine" class="form-label fw-bold">重機名</label>
+            <input type="text" class="form-control" id="heavy_machine" name="heavy_machine" placeholder="例: 0.2m3BH">
+          </div>
+          <div class="mb-3">
+            <label for="person_count" class="form-label fw-bold">人数</label>
+            <input type="number" class="form-control" id="person_count" name="person_count" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label for="work_unit" class="form-label fw-bold">歩掛項目（単位例: m, 個）</label>
+            <input type="text" class="form-control" id="work_unit" name="work_unit" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">作業サイクル</label>
+            <textarea class="form-control" name="work_cycle" rows="2" placeholder="例: 掘削→均し→転圧" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">サイクルタイム計測・品質試験・出来形確認・写真管理</label>
+            <textarea class="form-control" name="cycle_options" rows="2" placeholder="例: サイクルタイム計測あり、品質試験：土質試験、出来形：計測、写真：撮影"></textarea>
+          </div>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-success btn-lg w-100"><i class="bi bi-arrow-right-circle me-2"></i>次へ（日々の作業記録）</button>
+    </form>
+  </div>
+</div>
+<script>
+document.getElementById('add-material').onclick = function() {
+  var list = document.getElementById('material-list');
+  var div = document.createElement('div');
+  div.className = 'input-group mb-2';
+  div.innerHTML = '<input type="text" class="form-control" name="material_name[]" placeholder="材料名" required>' +
+                  '<input type="number" class="form-control" name="material_qty[]" placeholder="数量" min="0" step="0.01" required>' +
+                  '<button type="button" class="btn btn-outline-danger remove-material">削除</button>';
+  div.querySelector('.remove-material').onclick = function() { div.remove(); };
+  list.appendChild(div);
+};
+document.querySelectorAll('.remove-material').forEach(function(btn) {
+  btn.onclick = function() { btn.parentElement.remove(); };
+});
+</script>
+{% endblock %}

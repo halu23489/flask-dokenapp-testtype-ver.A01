@@ -1,0 +1,23 @@
+
+{% extends "base.html" %}
+{% block content %}
+<div class="app-grid">
+  <!-- 歩掛マスターアイコン -->
+  <a href="{{ url_for('workmaster_basic') }}" class="app-tile metal-steel" style="min-height:180px;">
+    <div class="app-icon metal-gold"><i class="bi bi-clipboard-data" style="font-size:2.5rem;"></i></div>
+    <div class="app-tile-title">歩掛マスター</div>
+    <div class="app-tile-desc">工事現場の歩掛・進捗管理</div>
+  </a>
+  <!-- コンクリート打設マスターアイコン -->
+  <a href="#" class="app-tile metal-silver" style="min-height:180px;" onclick="showConcreteAlert(); return false;">
+    <div class="app-icon metal-bronze"><i class="bi bi-building" style="font-size:2.5rem;"></i></div>
+    <div class="app-tile-title">コンクリート打設マスター</div>
+    <div class="app-tile-desc">コンクリート打設管理（作成中）</div>
+  </a>
+</div>
+<script>
+function showConcreteAlert() {
+  alert('コンクリート打設マスターは現在作成中です。更新をしばらくお待ちください。');
+}
+</script>
+{% endblock %}

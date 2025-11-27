@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+      <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                  <i class="bi bi-gear-fill me-2"></i><strong>このページは現在開発中です。</strong>
+                  <p class="mb-0 mt-2">ここでは、過去の作業記録データや歩掛データに基づいて、異なる現場や条件の効率比較を行うツールを実装する予定です。</p>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                  <div class="card-header bg-secondary text-white">比較ツールの機能案</div>
+                  <div class="card-body">
+                        <ul>
+                              <li>任意の期間・作業を抽出して、**投入人員/出来高** の比率を比較するグラフ表示。</li>
+                              <li>天気や備考欄の情報を基に、作業効率への影響度を分析。</li>
+                              <li>目標歩掛と実績歩掛の乖離分析。</li>
+                        </ul>
+                  </div>
+            </div>
+            
+            <p class="text-muted">開発が完了したら、サイドバーのリンクからアクセスできるようになります。</p>
+      </div>
+</div>
+{% endblock %}

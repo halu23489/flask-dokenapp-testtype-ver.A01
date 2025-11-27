@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-7 col-md-9 mx-auto">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center p-4">
+                <h4 class="card-title mb-3 text-muted">経過時間</h4>
+                
+                <div class="display-3 fw-bold mb-4" id="timeDisplay" style="font-family: 'Inter', monospace;">00:00.00</div>
+                
+
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <button class="btn btn-secondary btn-lg" id="resetBtn" disabled><i class="bi bi-arrow-counterclockwise me-2"></i>リセット</button>
+                    <button class="btn btn-warning btn-lg" id="lapBtn" disabled><i class="bi bi-flag me-2"></i>サイクル終了 (ラップ)</button>
+                    <button class="btn btn-success btn-lg" id="startStopBtn"><i class="bi bi-play-fill me-2" id="startStopIcon"></i>開始</button>
+                </div>
+                <small class="text-muted mt-3 d-block">※ 「サイクル終了」ボタンを押すと、その時点までの経過時間が記録されます。</small>
+            </div>
+        </div>
+
+        <h2 class="h5 mt-5 mb-3">⏱️ 計測されたサイクルタイム</h2>
+        
+        <div class="card shadow-sm">
+            <ul class="list-group list-group-flush" id="lapList">
+                <li class="list-group-item text-muted text-center" id="noLapMessage">まだサイクルは計測されていません。</li>
+            </ul>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const timeDisplay = document.getElementById('timeDisplay');
+    const startStopBtn = document.getElementById('startStopBtn');
+    const startStopIcon = document.getElementById('startStopIcon');
+    const lapBtn = document.getElementById('lapBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const lapList = document.getElementById('lapList');
+    const noLapMessage = document.getElementById('noLapMessage');
+
+    let startTime;
+    let elapsedTime = 0;
+    let timerInterval;
+    let isRunning = false;
+    let lapCounter = 0;
+
+    // 時間をフォーマットする関数 (00:00.00)
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const milliseconds = Math.floor((ms % 1000) / 10); // 10ミリ秒単位
+
+        const formattedMinutes = String(minutes).padStart(2, '0');
+        const formattedSeconds = String(seconds).padStart(2, '0');
+        const formattedMilliseconds = String(milliseconds).padStart(2, '0');
+
+        return `${formattedMinutes}:${formattedSeconds}.${formattedMilliseconds}`;
+    }
+
+    // 時間表示を更新する関数
+    function updateTimeDisplay() {
+        const currentTime = Date.now();
+        elapsedTime = currentTime - startTime;
+        timeDisplay.textContent = formatTime(elapsedTime);
+    }
+
+    // ストップウォッチを開始/停止する
+    function startStop() {
+        if (isRunning) {
+            // 停止
+            clearInterval(timerInterval);
+            isRunning = false;
+            startStopBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>再開';
+            startStopBtn.classList.remove('btn-danger');
+            startStopBtn.classList.add('btn-success');
+            lapBtn.disabled = true;
+            resetBtn.disabled = false; // 停止中はリセット可能
+        } else {
+            // 開始または再開
+            startTime = Date.now() - elapsedTime;
+            timerInterval = setInterval(updateTimeDisplay, 10); // 10msごとに更新
+            isRunning = true;
+            startStopBtn.innerHTML = '<i class="bi bi-pause-fill me-2"></i>停止';
+            startStopBtn.classList.remove('btn-success');
+            startStopBtn.classList.add('btn-danger');
+            lapBtn.disabled = false;
+            resetBtn.disabled = true; // 実行中はリセット不可
+            
+            // 初回スタート時、リセット後ではない場合はlapBtnを有効にする
+            if(elapsedTime === 0) {
+                 lapBtn.disabled = true; // 初回はラップできないようにする
+            } else {
+                 lapBtn.disabled = false;
+            }
+        }
+    }
+
+    // ラップタイム（サイクルタイム）を記録する
+    function recordLap() {
+        if (!isRunning) return;
+
+        // 経過時間を記録
+        lapCounter++;
+        const lapTime = formatTime(elapsedTime);
+        
+        // リストアイテムを作成
+        const listItem = document.createElement('li');
+        listItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'py-3');
+        listItem.innerHTML = `
+            <div>
+                <span class="badge bg-primary rounded-pill me-3">${lapCounter}</span>
+                <strong>サイクルタイム:</strong> ${lapTime}
+            </div>
+            <span class="text-muted">（計測開始からの時間）</span>
+        `;
+        
+        // リストの先頭に追加 (新しい記録が上に来るように)
+        lapList.prepend(listItem);
+
+        // 「まだ計測されていません」のメッセージを非表示にする
+        if (noLapMessage) {
+            noLapMessage.style.display = 'none';
+        }
+
+        // ラップ後、ストップウォッチをリセットせずそのまま計測を続けるため、時間はリセットしない
+    }
+
+    // リセットする
+    function resetTimer() {
+        clearInterval(timerInterval);
+        isRunning = false;
+        elapsedTime = 0;
+        lapCounter = 0;
+        timeDisplay.textContent = '00:00.00';
+        
+        // ボタンを初期状態に戻す
+        startStopBtn.innerHTML = '<i class="bi bi-play-fill me-2"></i>開始';
+        startStopBtn.classList.remove('btn-danger');
+        startStopBtn.classList.add('btn-success');
+        lapBtn.disabled = true;
+        resetBtn.disabled = true; // リセット直後は再スタートするまでリセット不可
+
+        // ラップリストをクリア
+        lapList.innerHTML = '';
+        lapList.appendChild(noLapMessage);
+        noLapMessage.style.display = 'block';
+    }
+
+    // イベントリスナー
+    startStopBtn.addEventListener('click', startStop);
+    lapBtn.addEventListener('click', recordLap);
+    resetBtn.addEventListener('click', resetTimer);
+    
+    // ページロード時の初期設定
+    resetTimer();
+
+</script>
+{% endblock %}
