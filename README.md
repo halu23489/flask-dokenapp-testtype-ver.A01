@@ -1,0 +1,1 @@
+# flask-dokenapp-testtype-ver.A01
