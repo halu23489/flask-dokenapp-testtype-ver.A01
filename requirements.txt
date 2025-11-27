@@ -1,0 +1,4 @@
+# Minimal dependencies for this Flask app
+Flask
+pandas
+XlsxWriter
