@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white"><i class="bi bi-flag me-2"></i>歩掛マスター（プロトタイプ）設定</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('workmaster_proto_basic') }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">現場名</label>
+              <input type="text" name="site_name" class="form-control form-control-lg" value="{{ project_data.site_name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">作業名</label>
+              <input type="text" name="task_name" class="form-control form-control-lg" value="{{ project_data.task_name }}" required>
+            </div>
+          </div>
+          <div class="row g-3 mt-2">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">予定数量</label>
+              <input type="number" name="planned_quantity" class="form-control" step="0.1" value="{{ project_data.planned_quantity or '' }}" placeholder="例: 120.0" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-bold">単位</label>
+              <input type="text" name="planned_unit" class="form-control" value="{{ project_data.planned_unit }}" placeholder="m3, m2等" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">設計図書リンク</label>
+              <input type="url" name="design_link" class="form-control" value="{{ project_data.design_link }}" placeholder="https://...">
+            </div>
+          </div>
+          <div class="row g-3 mt-2">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">予算（人件費）</label>
+              <input type="number" name="budget_labor" class="form-control" step="1000" value="{{ project_data.budget.labor if project_data.budget else '' }}" placeholder="円">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">予算（機械）</label>
+              <input type="number" name="budget_machine" class="form-control" step="1000" value="{{ project_data.budget.machine if project_data.budget else '' }}" placeholder="円">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">予算（資材）</label>
+              <input type="number" name="budget_materials" class="form-control" step="1000" value="{{ project_data.budget.materials if project_data.budget else '' }}" placeholder="円">
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label fw-bold">作業サイクル（＋で行追加）</label>
+            <div id="cycle-list" class="d-flex flex-column gap-2">
+              {% if project_data.cycle_steps %}
+                {% for step_val, check_val in zip(project_data.cycle_steps, project_data.cycle_checks) %}
+                  <div class="row g-2 align-items-center cycle-row">
+                    <div class="col-md-5">
+                      <input type="text" name="step[]" class="form-control" placeholder="ステップ" value="{{ step_val }}">
+                    </div>
+                    <div class="col-md-5">
+                      <input type="text" name="check[]" class="form-control" placeholder="チェック" value="{{ check_val }}">
+                    </div>
+                    <div class="col-md-2 d-grid">
+                      <button type="button" class="btn btn-outline-danger remove-cycle">－</button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="row g-2 align-items-center cycle-row">
+                  <div class="col-md-5">
+                    <input type="text" name="step[]" class="form-control" placeholder="ステップ1">
+                  </div>
+                  <div class="col-md-5">
+                    <input type="text" name="check[]" class="form-control" placeholder="チェック1">
+                  </div>
+                  <div class="col-md-2 d-grid">
+                    <button type="button" class="btn btn-outline-danger remove-cycle">－</button>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            <div class="mt-2">
+              <button type="button" class="btn btn-outline-secondary" id="add-cycle"><i class="bi bi-plus-lg me-1"></i>ステップ追加</button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label fw-bold">使用道具メモ</label>
+            <input type="text" name="tool_list" class="form-control" value="{{ project_data.tool_list }}" placeholder="例: トランシット, 安全帯">
+          </div>
+          <div class="d-grid mt-3">
+            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-rocket-takeoff me-2"></i>プロトタイプ日報へ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-dark text-white"><i class="bi bi-list-check me-2"></i>チェックリスト候補</div>
+      <div class="card-body small">
+        {% for item in master_data.check_items %}
+          <div class="mb-2"><i class="bi bi-check2-circle text-success me-2"></i>{{ item }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const cycleList = document.getElementById('cycle-list');
+const addCycle = document.getElementById('add-cycle');
+
+function attachRemove(btn) {
+  btn.onclick = () => {
+    const row = btn.closest('.cycle-row');
+    if (cycleList.children.length > 1) row.remove();
+  };
+}
+
+Array.from(document.querySelectorAll('.remove-cycle')).forEach(attachRemove);
+
+addCycle.onclick = () => {
+  const div = document.createElement('div');
+  div.className = 'row g-2 align-items-center cycle-row';
+  div.innerHTML = `
+    <div class="col-md-5">
+      <input type="text" name="step[]" class="form-control" placeholder="ステップ">
+    </div>
+    <div class="col-md-5">
+      <input type="text" name="check[]" class="form-control" placeholder="チェック">
+    </div>
+    <div class="col-md-2 d-grid">
+      <button type="button" class="btn btn-outline-danger remove-cycle">－</button>
+    </div>
+  `;
+  attachRemove(div.querySelector('.remove-cycle'));
+  cycleList.appendChild(div);
+};
+</script>
+{% endblock %}
