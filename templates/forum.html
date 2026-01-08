@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="mb-3 d-flex gap-2">
+            <form class="d-flex flex-grow-1" method="GET" action="{{ url_for('forum') }}">
+                <input name="tag" class="form-control" placeholder="タグで検索（例: asphalt）" value="{{ tag }}">
+                <button class="btn btn-outline-primary ms-2" type="submit">検索</button>
+            </form>
+        </div>
+
+        {% for a in articles %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">{{ a.title or '(無題)' }}</h5>
+                    <p class="card-text">{{ a.body[:200] }}...</p>
+                    {% if a.tags %}
+                        <div class="mb-2">
+                            {% for t in a.tags.split(',') %}
+                                <a href="{{ url_for('forum') }}?tag={{ t }}" class="badge bg-secondary text-decoration-none me-1">#{{ t.strip() }}</a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <a href="{{ url_for('view_article', article_id=a.id) }}" class="stretched-link">詳細・コメント</a>
+                    <div class="small text-muted mt-2">{{ a.created_at }}</div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-light">記事がまだありません。投稿してみましょう。</div>
+        {% endfor %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-3">
+            <h6>匿名で記事を投稿</h6>
+            <form method="POST" action="{{ url_for('post_article_submit') }}">
+                <div class="mb-2">
+                    <input name="title" class="form-control" placeholder="タイトル（任意）">
+                </div>
+                <div class="mb-2">
+                    <textarea name="body" class="form-control" rows="6" placeholder="本文（必須）" required></textarea>
+                </div>
+                <div class="mb-2">
+                    <input name="tags" class="form-control" placeholder="タグ（カンマ区切り） 例: asphalt,road">
+                </div>
+                <button class="btn btn-primary w-100">投稿する（匿名）</button>
+            </form>
+            <small class="text-muted d-block mt-2">軽微なモデレーションしか行いません。禁止事項を守ってください。</small>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'warning' }} mt-3" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endblock %}

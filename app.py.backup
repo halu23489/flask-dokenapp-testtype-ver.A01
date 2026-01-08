@@ -1,0 +1,286 @@
+import os
+import io
+import zipfile
+import logging
+import sqlite3
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, g, session, jsonify
+from PIL import Image
+import ezdxf
+import pandas as pd
+from io import StringIO, BytesIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import re
+from werkzeug.routing import BuildError
+
+# optional HEIC support
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    HEIF_AVAILABLE = True
+except Exception:
+    HEIF_AVAILABLE = False
+
+# ログを抑制
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+# --- 定数定義 ---
+MAX_TAGS = 5
+FORBIDDEN_WORDS = ['spam', 'test']
+MAX_ARTICLE_LENGTH = 5000
+MAX_COMMENT_LENGTH = 1000
+
+def check_spam_content(body, max_len):
+    """プレースホルダーのスパムチェック関数"""
+    if len(body) > max_len:
+        return True, f"本文が長すぎます (最大 {max_len} 文字)"
+    return False, ""
+
+# --- アプリ設定 ---
+app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET', 'your_super_secret_key_z_system_proto_0')
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+APP_NAME = 'ITショクチョー！'
+APP_CONFIG = {
+    'app_name': APP_NAME,
+    'app_title': 'Ζシステムシリーズ：現場の総合アプリ',
+    'app_subtitle': '現場に携わる技術者のための',
+    'nav': {
+        'home': {'name': '🏠 ホーム', 'url': 'index'},
+    }
+}
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'data.db')
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(DB_PATH)
+        db.row_factory = sqlite3.Row
+    return db
+
+def init_db():
+    db = sqlite3.connect(DB_PATH)
+    cur = db.cursor()
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS articles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        body TEXT NOT NULL,
+        tags TEXT,
+        created_at TEXT NOT NULL
+    )
+    ''')
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        article_id INTEGER NOT NULL,
+        body TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
+    )
+    ''')
+    db.commit()
+    db.close()
+
+try:
+    init_db()
+except Exception:
+    logging.getLogger(__name__).warning('DB 初期化に失敗しました（起動後に再試行してください）。')
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+app.jinja_env.globals.update(zip=zip, enumerate=enumerate, len=len)
+
+def safe_url_for(endpoint, **values):
+    """url_for を安全に呼び出す。存在しない endpoint の場合は '#' を返す"""
+    try:
+        return url_for(endpoint, **values)
+    except BuildError:
+        return '#'
+
+app.jinja_env.globals['safe_url_for'] = safe_url_for
+
+@app.context_processor
+def inject_global_config():
+    return {
+        'app_name': APP_CONFIG['app_name'],
+        'app_title': APP_CONFIG['app_title'],
+        'app_subtitle': APP_CONFIG['app_subtitle'],
+        'nav': APP_CONFIG['nav'],
+        'safe_url_for': safe_url_for,
+    }
+
+# レートリミッター設定
+storage_uri = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per hour"],
+    storage_uri=storage_uri,
+    app=app
+)
+
+# ===== ホームページ =====
+@app.route('/')
+def index():
+    """スマホアプリ風のホームダッシュボード"""
+    ctx = {
+        'page_title': 'ホーム',
+        'current_app': 'home',
+    }
+    return render_template('index.html', **ctx)
+
+@app.route('/workmaster_basic', methods=['GET', 'POST'])
+def workmaster_basic():
+    if request.method == 'POST':
+        session['workmaster_basic'] = {
+            'site_name': request.form.get('site_name', ''),
+            'task_name': request.form.get('task_name', ''),
+            'period': request.form.get('period', ''),
+            'contractor': request.form.get('contractor', ''),
+            'machines': request.form.get('machines', ''),
+        }
+        return redirect(url_for('workmaster_detail'))
+    data = session.get('workmaster_basic', {})
+    return render_template('workmaster_basic.html', page_title='歩掛マスター：基本情報入力', current_app='workmaster_basic', data=data)
+
+@app.route('/workmaster_detail', methods=['GET', 'POST'])
+def workmaster_detail():
+    if request.method == 'POST':
+        session['workmaster_detail'] = {
+            'material_name': request.form.getlist('material_name[]'),
+            'material_qty': request.form.getlist('material_qty[]'),
+            'heavy_machine': request.form.get('heavy_machine', ''),
+            'person_count': request.form.get('person_count', ''),
+            'work_unit': request.form.get('work_unit', ''),
+            'work_cycle': request.form.get('work_cycle', ''),
+            'cycle_options': request.form.get('cycle_options', ''),
+        }
+        return redirect(url_for('workmaster_daily'))
+    data = session.get('workmaster_detail', {})
+    return render_template('workmaster_detail.html', page_title='歩掛マスター：詳細内容入力', current_app='workmaster_detail', data=data)
+
+@app.route('/daily_record', methods=['GET', 'POST'])
+def daily_record():
+    project_data = session.get('project_data')
+    if not project_data or not project_data.get('site_name'):
+        return redirect(url_for('index'))
+    daily_records = session.get('daily_records', [])
+    if request.method == 'POST':
+        record = {
+            'date': request.form.get('record_date'),
+            'personnel': request.form.get('personnel'),
+            'machinery': request.form.get('machinery'),
+            'work_time': request.form.get('work_time'),
+            'work_content': request.form.get('work_content'),
+            'progress_unit': request.form.get('progress_unit'),
+            'progress_value': request.form.get('progress_value'),
+            'progress_total': request.form.get('progress_total'),
+            'weather': request.form.get('weather'),
+            'remarks': request.form.get('remarks'),
+        }
+        daily_records.append(record)
+        session['daily_records'] = daily_records
+        return redirect(url_for('daily_record'))
+    recent_records = daily_records[::-1]
+    return render_template('daily_record.html', page_title='日々の作業記録', current_app='record', project_data=project_data, recent_records=recent_records)
+
+@app.route('/export_excel')
+def export_excel():
+    daily_records = session.get('daily_records', [])
+    project_data = session.get('project_data', {})
+    if not daily_records:
+        return redirect(url_for('daily_record'))
+    df = pd.DataFrame(daily_records)
+    site_info = pd.Series({
+        '現場名': project_data.get('site_name', 'N/A'),
+        '作業名': project_data.get('task_name', 'N/A'),
+        '道具': project_data.get('tool_list', 'N/A'),
+        '作業サイクル': ", ".join([f"{s} ({c})" for s, c in zip(project_data.get('cycle_steps', []), project_data.get('cycle_checks', []))]),
+    })
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='日々の記録', index=False)
+        site_df = pd.DataFrame(site_info).T
+        site_df.to_excel(writer, sheet_name='現場設定', index=False)
+    output.seek(0)
+    return render_template('daily_record.html', page_title='日々の作業記録', current_app='record', project_data=project_data, recent_records=daily_records[::-1], export_message="✅ Excelデータのエクスポート処理が完了しました（ダミー）。")
+
+@app.route('/stopwatch', methods=['GET', 'POST'])
+def stopwatch():
+    project_data = session.get('project_data')
+    if not project_data or not project_data.get('cycle_steps'):
+        return redirect(url_for('index'))
+    cycle_records = session.get('cycle_records', [])
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'add_record':
+            new_record = {
+                'step': request.form.get('step_name'),
+                'time': request.form.get('time_duration')
+            }
+            cycle_records.append(new_record)
+            session['cycle_records'] = cycle_records
+            return "Record added successfully", 200
+        elif action == 'clear_records':
+            session.pop('cycle_records', None)
+            return redirect(url_for('stopwatch'))
+    recent_records = cycle_records[::-1]
+    return render_template('stopwatch.html', page_title='サイクルタイム計測', current_app='stopwatch', project_data=project_data, recent_records=recent_records)
+
+@app.route('/workmaster_daily', methods=['GET', 'POST'])
+def workmaster_daily():
+    basic_data = session.get('workmaster_basic', {})
+    detail_data = session.get('workmaster_detail', {})
+    if not basic_data.get('site_name'):
+        return redirect(url_for('workmaster_basic'))
+    daily_records = session.get('workmaster_daily_records', [])
+    if request.method == 'POST':
+        record = {
+            'date': request.form.get('record_date'),
+            'weather': request.form.get('weather'),
+            'work_time': request.form.get('work_time'),
+            'person_count': request.form.get('person_count'),
+            'op_count': request.form.get('op_count'),
+            'machine_count': request.form.get('machine_count'),
+            'progress_value': request.form.get('progress_value'),
+            'progress_total': request.form.get('progress_total'),
+            'remarks': request.form.get('remarks'),
+        }
+        daily_records.append(record)
+        session['workmaster_daily_records'] = daily_records
+        return redirect(url_for('workmaster_daily'))
+    recent_records = daily_records[::-1]
+    return render_template('workmaster_daily.html', page_title='歩掛マスター：日々の作業記録', current_app='workmaster_daily', basic_data=basic_data, detail_data=detail_data, recent_records=recent_records)
+
+@app.route('/workmaster_export_excel')
+def workmaster_export_excel():
+    basic_data = session.get('workmaster_basic', {})
+    detail_data = session.get('workmaster_detail', {})
+    daily_records = session.get('workmaster_daily_records', [])
+    if not daily_records:
+        return redirect(url_for('workmaster_daily'))
+    df = pd.DataFrame(daily_records)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='日々の記録', index=False)
+        basic_df = pd.DataFrame([basic_data])
+        basic_df.to_excel(writer, sheet_name='基本情報', index=False)
+        detail_df = pd.DataFrame([detail_data])
+        detail_df.to_excel(writer, sheet_name='詳細情報', index=False)
+    output.seek(0)
+    return render_template('workmaster_daily.html', page_title='歩掛マスター：日々の作業記録', current_app='workmaster_daily', basic_data=basic_data, detail_data=detail_data, recent_records=daily_records[::-1], export_message="✅ Excelデータのエクスポート処理が完了しました（ダミー）。")
+
+@app.route('/comparison_tool')
+def comparison_tool():
+    return render_template('comparison_tool.html', page_title='効率比較ツール', current_app='comparison_tool')
+
+if __name__ == '__main__':
+    app.run(debug=True)

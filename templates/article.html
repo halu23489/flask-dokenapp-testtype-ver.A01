@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h4>{{ article.title or '(無題)' }}</h4>
+        <div class="small text-muted mb-2">{{ article.created_at }}</div>
+        <p>{{ article.body }}</p>
+        {% if article.tags %}
+            <div class="mb-2">
+                {% for t in article.tags.split(',') %}
+                    <a href="{{ url_for('forum') }}?tag={{ t }}" class="badge bg-secondary text-decoration-none me-1">#{{ t.strip() }}</a>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h6>コメント ({{ comments|length }})</h6>
+        {% for c in comments %}
+            <div class="border rounded p-2 mb-2">
+                <div class="small text-muted">{{ c.created_at }}</div>
+                <div>{{ c.body }}</div>
+            </div>
+        {% else %}
+            <div class="text-muted">コメントはまだありません。</div>
+        {% endfor %}
+
+        <form method="POST" action="{{ url_for('post_comment_submit', article_id=article.id) }}" class="mt-3">
+            <div class="mb-2">
+                <textarea name="comment_body" class="form-control" rows="3" placeholder="コメントを入力（匿名）" required></textarea>
+            </div>
+            <button class="btn btn-outline-primary">コメント投稿</button>
+        </form>
+    </div>
+</div>
+
+{% if similar %}
+<div class="card">
+    <div class="card-body">
+        <h6>類似の記事</h6>
+        <ul class="list-unstyled mb-0">
+            {% for s in similar %}
+                <li><a href="{{ url_for('view_article', article_id=s.id) }}">{{ s.title or '(無題)' }}</a> <small class="text-muted">- {{ s.created_at }}</small></li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'warning' }} mt-3" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endblock %}

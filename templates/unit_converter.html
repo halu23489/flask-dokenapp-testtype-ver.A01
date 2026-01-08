@@ -1,0 +1,132 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">単位換算ツール</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="convForm">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label">モード</label>
+                    <select id="mode" name="mode" class="form-select">
+                        <option value="unit">単位変換</option>
+                        <option value="material">材料体積⇔質量</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label class="form-label">値</label>
+                    <input type="number" name="value" class="form-control" step="0.01" value="0" required>
+                </div>
+
+                <div class="col-12 col-md-3" id="categoryWrap">
+                    <label class="form-label">カテゴリ</label>
+                    <select id="category" name="category" class="form-select">
+                        <option value="length">長さ</option>
+                        <option value="weight">重量</option>
+                        <option value="volume">体積</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3" id="fromWrap">
+                    <label class="form-label">From</label>
+                    <select id="from_unit" name="from_unit" class="form-select" required></select>
+                </div>
+
+                <div class="col-12 col-md-3" id="toWrap">
+                    <label class="form-label">To</label>
+                    <select id="to_unit" name="to_unit" class="form-select" required></select>
+                </div>
+
+                <div class="col-12 col-md-3 d-none" id="materialSelectWrap">
+                    <label class="form-label">材料</label>
+                    <select id="material" name="material" class="form-select">
+                        {% for key, mat in materials.items() %}
+                            <option value="{{ key }}">{{ mat.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3 d-none" id="directionWrap">
+                    <label class="form-label">方向</label>
+                    <select id="direction" name="direction" class="form-select">
+                        <option value="vol_to_mass">体積 → 質量</option>
+                        <option value="mass_to_vol">質量 → 体積</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">換算</button>
+            </div>
+        </form>
+
+        {% if result %}
+            <div class="alert alert-info mt-3">
+                {% if result.mode == 'unit' %}
+                    {{ result.value }} {{ result.from }} ＝ <strong>{{ result.out }}</strong> {{ result.to }}
+                {% else %}
+                    {{ result.value }} {{ result.from_unit }} ({{ result.material }}) ＝ <strong>{{ result.out }}</strong> {{ result.to_unit }}<br>
+                    <small class="text-muted">比重: {{ result.density }} kg/m³</small>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function(){
+    const units = {
+        length: [{v:'m', t:'メートル (m)'}, {v:'cm', t:'センチメートル (cm)'}, {v:'mm', t:'ミリメートル (mm)'}, {v:'km', t:'キロメートル (km)'}, {v:'ft', t:'フィート (ft)'}, {v:'in', t:'インチ (in)'}],
+        weight: [{v:'kg', t:'キログラム (kg)'}, {v:'g', t:'グラム (g)'}, {v:'t', t:'トン (t)'}, {v:'lb', t:'ポンド (lb)'}],
+        volume: [{v:'m3', t:'立方メートル (m³)'}, {v:'l', t:'リットル (L)'}, {v:'ml', t:'ミリリットル (mL)'}]
+    };
+
+    const modeEl = document.getElementById('mode');
+    const category = document.getElementById('category');
+    const from = document.getElementById('from_unit');
+    const to = document.getElementById('to_unit');
+    const materialWrap = document.getElementById('materialSelectWrap');
+    const directionWrap = document.getElementById('directionWrap');
+    const categoryWrap = document.getElementById('categoryWrap');
+
+    function populate(cat){
+        from.innerHTML = ''; to.innerHTML = '';
+        units[cat].forEach(u=> {
+            const o1 = document.createElement('option');
+            o1.value = u.v; o1.textContent = u.t;
+            const o2 = o1.cloneNode(true);
+            from.appendChild(o1); to.appendChild(o2);
+        });
+    }
+
+    function updateVisibility(){
+        if(modeEl.value === 'material'){
+            materialWrap.classList.remove('d-none');
+            directionWrap.classList.remove('d-none');
+            categoryWrap.classList.add('d-none');
+            const dir = document.getElementById('direction').value || 'vol_to_mass';
+            if(dir === 'vol_to_mass'){
+                from.innerHTML = ''; units['volume'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; from.appendChild(o); });
+                to.innerHTML = ''; units['weight'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; to.appendChild(o); });
+            } else {
+                from.innerHTML = ''; units['weight'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; from.appendChild(o); });
+                to.innerHTML = ''; units['volume'].forEach(u=> { const o = document.createElement('option'); o.value=u.v; o.textContent=u.t; to.appendChild(o); });
+            }
+        } else {
+            materialWrap.classList.add('d-none');
+            directionWrap.classList.add('d-none');
+            categoryWrap.classList.remove('d-none');
+            populate(category.value || 'length');
+        }
+    }
+
+    category.addEventListener('change', ()=> populate(category.value));
+    modeEl.addEventListener('change', updateVisibility);
+    document.getElementById('direction').addEventListener('change', updateVisibility);
+    populate('length');
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <div class="app-icon metal-copper me-3" style="width:72px;height:72px;border-radius:12px;">
+        <i class="bi bi-camera-fill" style="font-size:1.6rem;"></i>
+    </div>
+    <div>
+        <h2 class="mb-0">HEIC to JPG 変換</h2>
+        <small class="text-muted">EXIFを保持したままJPGへ変換します</small>
+    </div>
+</div>
+
+<div class="container">
+    <p class="lead">iPhoneなどで撮影したHEIC形式の画像を、EXIF（メタデータ）を維持したまま汎用的なJPG形式に変換します。</p>
+
+    <!-- Flashメッセージ -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'warning' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">HEICファイルアップロード</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('convert_file') }}" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="heicFile" class="form-label">HEICファイルを選択:</label>
+                    <input class="form-control" type="file" id="heicFile" name="heic_file" accept=".heic, .heif" required multiple>
+                    <div class="form-text">
+                        複数のファイルを選択できます。変換後、ファイルは <strong>Converted_HEIC_Files.zip</strong> としてダウンロードされます。
+                    </div>
+                </div>
+                {% if HEIF_AVAILABLE %}
+                    <button type="submit" class="btn btn-success">変換してZipをダウンロード</button>
+                {% else %}
+                    <button type="submit" class="btn btn-danger" disabled>HEICライブラリがありません</button>
+                    <p class="text-danger mt-2">サーバー側でHEIC変換ライブラリが利用できません。</p>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
