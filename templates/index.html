@@ -1,26 +1,221 @@
-
 {% extends "base.html" %}
+
 {% block content %}
-<div class="app-grid">
-  <a href="{{ url_for('workmaster_basic') }}" class="app-tile metal-steel" style="min-height:180px;">
-    <div class="app-icon metal-gold"><i class="bi bi-clipboard-data" style="font-size:2.5rem;"></i></div>
-    <div class="app-tile-title">歩掛マスター（メイン）</div>
-    <div class="app-tile-desc">既存フローで入力する安定版</div>
-  </a>
-  <a href="{{ url_for('workmaster_basic') }}" class="app-tile metal-silver" style="min-height:180px;">
-    <div class="app-icon metal-bronze"><i class="bi bi-lightning-charge" style="font-size:2.5rem;"></i></div>
-    <div class="app-tile-title">歩掛マスター（プロトタイプ）</div>
-    <div class="app-tile-desc">マスタ参照＋自動計算の最新版</div>
-  </a>
-  <a href="#" class="app-tile metal-copper" style="min-height:180px;" onclick="showConcreteAlert(); return false;">
-    <div class="app-icon metal-gold"><i class="bi bi-building" style="font-size:2.5rem;"></i></div>
-    <div class="app-tile-title">コンクリート打設マスター</div>
-    <div class="app-tile-desc">打設計画・配合・記録（準備中）</div>
-  </a>
+<div class="container-fluid px-3 py-4">
+  <h2 class="text-center mb-4" style="font-weight:700; color:#2c3e50;">
+    <i class="bi bi-grid-3x3-gap-fill"></i> アプリ一覧
+  </h2>
+  
+  <!-- スマホアプリ風グリッド -->
+  <div class="row g-3">
+    
+    <!-- 歩掛マスター -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('workmaster_basic') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-primary">
+            <i class="bi bi-clipboard-data"></i>
+          </div>
+          <div class="app-name">歩掛マスター</div>
+          <div class="app-desc">工事の歩掛管理</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- HEIC変換 -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('converter_page') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-success">
+            <i class="bi bi-image"></i>
+          </div>
+          <div class="app-name">HEIC→JPG</div>
+          <div class="app-desc">画像形式変換</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- 単位換算 -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('unit_converter_page') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-info">
+            <i class="bi bi-rulers"></i>
+          </div>
+          <div class="app-name">単位換算</div>
+          <div class="app-desc">長さ・重量・体積</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- DXF座標 -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('dxf_tool_page') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-warning">
+            <i class="bi bi-globe"></i>
+          </div>
+          <div class="app-name">DXF座標</div>
+          <div class="app-desc">座標をDXF出力</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- 計算ツール -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('calculator') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-danger">
+            <i class="bi bi-calculator"></i>
+          </div>
+          <div class="app-name">計算ツール</div>
+          <div class="app-desc">現場計算支援</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- 比較見積もり -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('comparison_tool_page') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-secondary">
+            <i class="bi bi-bar-chart"></i>
+          </div>
+          <div class="app-name">比較見積</div>
+          <div class="app-desc">効率比較分析</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- フォーラム（詰所） -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{{ url_for('forum') }}" class="text-decoration-none">
+        <div class="app-card">
+          <div class="app-icon bg-gradient-dark">
+            <i class="bi bi-chat-dots"></i>
+          </div>
+          <div class="app-name">詰所</div>
+          <div class="app-desc">掲示板・知恵袋</div>
+        </div>
+      </a>
+    </div>
+    
+    <!-- プレースホルダー：今後追加予定 -->
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="app-card app-card-disabled">
+        <div class="app-icon bg-light text-muted">
+          <i class="bi bi-plus-circle"></i>
+        </div>
+        <div class="app-name text-muted">追加予定</div>
+        <div class="app-desc text-muted">Coming Soon</div>
+      </div>
+    </div>
+    
+  </div>
 </div>
-<script>
-function showConcreteAlert() {
-  alert('コンクリート打設マスターは現在作成中です。更新をしばらくお待ちください。');
-}
-</script>
+
+<style>
+  .app-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .app-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  
+  .app-card-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .app-card-disabled:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .app-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    font-size: 32px;
+    color: white;
+  }
+  
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .bg-gradient-success {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+  
+  .bg-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+  
+  .bg-gradient-warning {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  }
+  
+  .bg-gradient-danger {
+    background: linear-gradient(135deg, #ff6a00 0%, #ee0979 100%);
+  }
+  
+  .bg-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  }
+  
+  .bg-gradient-dark {
+    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+  }
+  
+  .app-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #2c3e50;
+    margin-bottom: 4px;
+  }
+  
+  .app-desc {
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+  
+  @media (max-width: 576px) {
+    .app-card {
+      min-height: 140px;
+      padding: 16px;
+    }
+    
+    .app-icon {
+      width: 56px;
+      height: 56px;
+      font-size: 28px;
+    }
+    
+    .app-name {
+      font-size: 14px;
+    }
+    
+    .app-desc {
+      font-size: 11px;
+    }
+  }
+</style>
 {% endblock %}
