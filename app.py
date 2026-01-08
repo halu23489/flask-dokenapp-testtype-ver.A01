@@ -333,6 +333,167 @@ def workmaster_export_excel():
         flash(f'Excel出力に失敗しました: {e}', 'danger')
         return redirect(url_for('workmaster_daily'))
 
+# ===== 歩掛マスター（プロトタイプ） =====
+@app.route('/workmaster_proto_basic', methods=['GET', 'POST'])
+def workmaster_proto_basic():
+    project = session.get('proto_project_data', {})
+    if not project:
+        project = {
+            'site_name': '未設定の現場',
+            'task_name': '未設定の作業',
+            'planned_quantity': 0.0,
+            'planned_unit': '',
+            'cycle_steps': [],
+            'cycle_checks': [],
+            'budget': {'labor': 0, 'machine': 0, 'materials': 0},
+            'design_link': '',
+            'phase': '施工前',
+            'progress_pct': 0.0,
+            'actual_cost': 0.0,
+        }
+    
+    if request.method == 'POST':
+        project.update({
+            'site_name': request.form.get('site_name', project.get('site_name', '')),
+            'task_name': request.form.get('task_name', project.get('task_name', '')),
+            'planned_quantity': safe_float(request.form.get('planned_quantity'), project.get('planned_quantity', 0.0)),
+            'planned_unit': request.form.get('planned_unit', project.get('planned_unit', '')),
+            'design_link': request.form.get('design_link', project.get('design_link', '')),
+            'budget': {
+                'labor': safe_float(request.form.get('budget_labor'), project.get('budget', {}).get('labor', 0)),
+                'machine': safe_float(request.form.get('budget_machine'), project.get('budget', {}).get('machine', 0)),
+                'materials': safe_float(request.form.get('budget_materials'), project.get('budget', {}).get('materials', 0)),
+            },
+            'cycle_steps': request.form.getlist('step[]'),
+            'cycle_checks': request.form.getlist('check[]'),
+            'tool_list': request.form.get('tool_list', ''),
+        })
+        session['proto_project_data'] = project
+        return redirect(url_for('workmaster_proto_daily'))
+
+    return render_template(
+        'workmaster_proto_basic.html',
+        page_title='歩掛マスター（プロトタイプ）',
+        current_app='workmaster_proto',
+        project_data=project,
+        master_data=MASTER_DATA,
+    )
+
+@app.route('/workmaster_proto_daily', methods=['GET', 'POST'])
+def workmaster_proto_daily():
+    project_data = session.get('proto_project_data', {})
+    if not project_data:
+        project_data = {
+            'site_name': '未設定の現場',
+            'task_name': '未設定の作業',
+            'planned_quantity': 0.0,
+            'planned_unit': '',
+            'cycle_steps': [],
+            'cycle_checks': [],
+            'budget': {'labor': 0, 'machine': 0, 'materials': 0},
+            'design_link': '',
+            'phase': '施工前',
+            'progress_pct': 0.0,
+            'actual_cost': 0.0,
+        }
+    
+    daily_records = session.get('proto_daily_records', [])
+    if request.method == 'POST':
+        machinery_list = request.form.getlist('machinery[]')
+        work_contents = request.form.getlist('work_content[]')
+        progress_value = safe_float(request.form.get('progress_value'))
+        progress_total = safe_float(request.form.get('progress_total'), project_data.get('planned_quantity', 0.0))
+        personnel = int(safe_float(request.form.get('personnel'), 0))
+        work_time = safe_float(request.form.get('work_time'), 0)
+
+        cycle_steps = request.form.getlist('cycle_step[]')
+        cycle_counts = request.form.getlist('cycle_count[]')
+        cycle_progresses = request.form.getlist('cycle_progress[]')
+        cycle_entries = []
+        for s, c, p in zip(cycle_steps, cycle_counts, cycle_progresses):
+            if not s:
+                continue
+            entry = {
+                'step': s,
+                'count': int(safe_float(c, 0)) if c else None,
+                'progress': safe_float(p, None) if p else None,
+            }
+            cycle_entries.append(entry)
+
+        cost_personnel, cost_machinery, cost_total = calculate_daily_cost(personnel, work_time, machinery_list)
+
+        record = {
+            'date': request.form.get('record_date'),
+            'personnel': personnel,
+            'machinery': machinery_list,
+            'work_time': work_time,
+            'work_content': work_contents,
+            'progress_unit': request.form.get('progress_unit'),
+            'progress_value': progress_value,
+            'progress_total': progress_total,
+            'progress_value_float': progress_value,
+            'progress_total_float': progress_total,
+            'cycle_entries': cycle_entries,
+            'weather': request.form.get('weather'),
+            'remarks': request.form.get('remarks'),
+            'cost_personnel': cost_personnel,
+            'cost_machinery': cost_machinery,
+            'cost_total': cost_total,
+        }
+        daily_records.append(record)
+        session['proto_daily_records'] = daily_records
+        update_project_from_daily(project_data, daily_records, session_key='proto_project_data')
+        return redirect(url_for('workmaster_proto_daily'))
+
+    recent_records = daily_records[::-1]
+    return render_template(
+        'workmaster_proto_daily.html',
+        page_title='歩掛マスター（日報・プロトタイプ）',
+        current_app='workmaster_proto',
+        project_data=project_data,
+        recent_records=recent_records,
+        master_data=MASTER_DATA,
+    )
+
+@app.route('/workmaster_proto_export')
+def workmaster_proto_export():
+    daily_records = session.get('proto_daily_records', [])
+    project_data = session.get('proto_project_data', {})
+    if not daily_records:
+        flash('記録データがありません。', 'warning')
+        return redirect(url_for('workmaster_proto_daily'))
+
+    try:
+        flattened = []
+        for rec in daily_records:
+            rec_copy = rec.copy()
+            if isinstance(rec_copy.get('machinery'), list):
+                rec_copy['machinery'] = ", ".join(rec_copy['machinery'])
+            flattened.append(rec_copy)
+
+        df = pd.DataFrame(flattened)
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # 日次記録シート
+            df.to_excel(writer, sheet_name='日次記録', index=False)
+            
+            # 現場設定シート
+            site_info = pd.Series({
+                '現場名': project_data.get('site_name', 'N/A'),
+                '作業名': project_data.get('task_name', 'N/A'),
+                '道具': project_data.get('tool_list', 'N/A'),
+                '作業サイクル': ", ".join([f"{s}" for s in project_data.get('cycle_steps', [])]),
+            })
+            site_df = pd.DataFrame(site_info).T
+            site_df.to_excel(writer, sheet_name='現場設定', index=False)
+        
+        output.seek(0)
+        return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        as_attachment=True, download_name='workmaster_proto_export.xlsx')
+    except Exception as e:
+        flash(f'Excel出力に失敗しました: {e}', 'danger')
+        return redirect(url_for('workmaster_proto_daily'))
+
 # ===== HEIC to JPG 変換 =====
 @app.route('/converter')
 def converter_page():
