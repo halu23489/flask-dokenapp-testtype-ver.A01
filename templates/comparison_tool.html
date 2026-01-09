@@ -263,7 +263,9 @@
                                             <td>
                                                 {% if row.type == 'image' %}
                                                     <div class="image-cell">
-                                                        {% set img_data = data.get(row.id, {}).get(col.id) %}
+                                                        {% set row_key = row.id|string %}
+                                                        {% set col_key = col.id|string %}
+                                                        {% set img_data = data.get(row_key, {}).get(col_key) %}
                                                         {% if img_data %}
                                                             <img src="data:image/jpeg;base64,{{ img_data }}" class="image-preview">
                                                         {% endif %}
@@ -273,14 +275,18 @@
                                                                class="image-input">
                                                     </div>
                                                 {% elif row.type == 'textarea' %}
+                                                    {% set row_key = row.id|string %}
+                                                    {% set col_key = col.id|string %}
                                                     <textarea class="cell-input" 
                                                               name="data_{{ row.id }}_{{ col.id }}"
-                                                              placeholder="入力してください">{{ data.get(row.id, {}).get(col.id, '') }}</textarea>
+                                                              placeholder="入力してください">{{ data.get(row_key, {}).get(col_key, '') }}</textarea>
                                                 {% else %}
+                                                    {% set row_key = row.id|string %}
+                                                    {% set col_key = col.id|string %}
                                                     <input type="text" 
                                                            class="cell-input" 
                                                            name="data_{{ row.id }}_{{ col.id }}"
-                                                           value="{{ data.get(row.id, {}).get(col.id, '') }}"
+                                                           value="{{ data.get(row_key, {}).get(col_key, '') }}"
                                                            placeholder="入力してください">
                                                 {% endif %}
                                             </td>

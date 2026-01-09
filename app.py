@@ -799,13 +799,14 @@ def comparison_tool_page():
         elif action == 'delete_column':
             try:
                 col_id = int(request.form.get('col_id'))
+                col_id_str = str(col_id)
                 columns = [c for c in columns if c['id'] != col_id]
                 session['comparison_columns'] = columns
                 
                 # データから該当列を削除
                 for row_id in data:
-                    if col_id in data[row_id]:
-                        del data[row_id][col_id]
+                    if col_id_str in data[row_id]:
+                        del data[row_id][col_id_str]
                 session['comparison_data'] = data
                 session.modified = True
             except (ValueError, TypeError):
@@ -815,12 +816,13 @@ def comparison_tool_page():
         elif action == 'delete_row':
             try:
                 row_id = int(request.form.get('row_id'))
+                row_id_str = str(row_id)
                 rows = [r for r in rows if r['id'] != row_id]
                 session['comparison_rows'] = rows
                 
                 # データから該当行を削除
-                if row_id in data:
-                    del data[row_id]
+                if row_id_str in data:
+                    del data[row_id_str]
                 session['comparison_data'] = data
                 session.modified = True
             except (ValueError, TypeError):
@@ -852,9 +854,11 @@ def comparison_tool_page():
                         try:
                             row_id = int(parts[0])
                             col_id = int(parts[1])
-                            if row_id not in data:
-                                data[row_id] = {}
-                            data[row_id][col_id] = value
+                            row_id_str = str(row_id)
+                            col_id_str = str(col_id)
+                            if row_id_str not in data:
+                                data[row_id_str] = {}
+                            data[row_id_str][col_id_str] = value
                         except (ValueError, TypeError):
                             pass
             
@@ -866,14 +870,16 @@ def comparison_tool_page():
                         try:
                             row_id = int(parts[0])
                             col_id = int(parts[1])
+                            row_id_str = str(row_id)
+                            col_id_str = str(col_id)
                             file = request.files[key]
                             if file and file.filename:
                                 import base64
                                 image_data = file.read()
                                 encoded = base64.b64encode(image_data).decode('utf-8')
-                                if row_id not in data:
-                                    data[row_id] = {}
-                                data[row_id][col_id] = encoded
+                                if row_id_str not in data:
+                                    data[row_id_str] = {}
+                                data[row_id_str][col_id_str] = encoded
                         except (ValueError, TypeError):
                             pass
             
