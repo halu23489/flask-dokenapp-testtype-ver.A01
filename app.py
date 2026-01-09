@@ -97,7 +97,7 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-app.jinja_env.globals.update(zip=zip, enumerate=enumerate, len=len)
+app.jinja_env.globals.update(zip=zip, enumerate=enumerate, len=len, now=datetime.now)
 
 # ===== 歩掛マスター共通関数 =====
 MASTER_DATA = {
