@@ -762,118 +762,123 @@ def comparison_tool_page():
     セッションベースでプロジェクトと見積もりを管理する。
     """
     
-    # セッションから既存のデータを取得
-    if 'comparisons' not in session:
-        session['comparisons'] = []
+    # セッションを永続化させる
+    session.permanent = True
     
     if request.method == 'POST':
         action = request.form.get('action')
-        project_id = request.form.get('project_id', '')
         
-        # セッションを読み込む
+        # セッションから現在のプロジェクト一覧を取得
         comparisons = session.get('comparisons', [])
-        
-        try:
-            project_id = int(project_id)
-        except (ValueError, TypeError):
-            project_id = None
         
         # プロジェクト追加
         if action == 'add_project':
-            project_name = request.form.get('project_name', '新規プロジェクト').strip()
+            project_name = request.form.get('project_name', '').strip()
             if project_name:
                 new_project = {
                     'project_name': project_name,
-                    'quotations': {},  # quote_key -> {name, items, total}
-                    'items': [],       # 見積もり項目の一覧
+                    'quotations': {},
+                    'items': [],
                     'min_cost': 0,
                     'min_quote': None
                 }
                 comparisons.append(new_project)
+                session['comparisons'] = comparisons
+                session.modified = True
         
         # 見積もり追加
-        elif action == 'add_quote' and project_id is not None and 0 <= project_id < len(comparisons):
-            quote_name = request.form.get('quote_name', '').strip()
-            item_name = request.form.get('item_name', '').strip()
-            item_cost_str = request.form.get('item_cost', '0')
-            
+        elif action == 'add_quote':
             try:
-                item_cost = float(item_cost_str)
-            except ValueError:
-                item_cost = 0
-            
-            project = comparisons[project_id]
-            
-            # 項目名を確保
-            if item_name not in project['items']:
-                project['items'].append(item_name)
-            
-            # 見積もりを追加または更新
-            if not quote_name:
-                quote_name = f"見積もり{len(project['quotations']) + 1}"
-            
-            quote_key = f"quote_{len(project['quotations'])}"
-            
-            if quote_key not in project['quotations']:
-                project['quotations'][quote_key] = {
-                    'name': quote_name,
-                    'items': {},
-                    'total': 0
-                }
-            
-            # 項目のコスト情報を追加
-            quote = project['quotations'][quote_key]
-            if item_name not in quote['items']:
-                quote['items'][item_name] = 0
-            quote['items'][item_name] += item_cost
-            
-            # 合計を再計算
-            quote['total'] = sum(quote['items'].values())
-            
-            # 最小コストを再計算
-            if project['quotations']:
-                costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
-                if costs:
-                    project['min_cost'] = min(costs)
-                    for qk, q in project['quotations'].items():
-                        if q['total'] == project['min_cost']:
-                            project['min_quote'] = q['name']
-                            break
+                project_id = int(request.form.get('project_id', -1))
+                if 0 <= project_id < len(comparisons):
+                    quote_name = request.form.get('quote_name', '').strip()
+                    item_name = request.form.get('item_name', '').strip()
+                    item_cost = float(request.form.get('item_cost', 0))
+                    
+                    project = comparisons[project_id]
+                    
+                    if item_name not in project['items']:
+                        project['items'].append(item_name)
+                    
+                    if not quote_name:
+                        quote_name = f"見積もり{len(project['quotations']) + 1}"
+                    
+                    quote_key = f"quote_{len(project['quotations'])}"
+                    
+                    if quote_key not in project['quotations']:
+                        project['quotations'][quote_key] = {
+                            'name': quote_name,
+                            'items': {},
+                            'total': 0
+                        }
+                    
+                    quote = project['quotations'][quote_key]
+                    if item_name not in quote['items']:
+                        quote['items'][item_name] = 0
+                    quote['items'][item_name] += item_cost
+                    quote['total'] = sum(quote['items'].values())
+                    
+                    # 最小コストを計算
+                    if project['quotations']:
+                        costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
+                        if costs:
+                            project['min_cost'] = min(costs)
+                            for qk, q in project['quotations'].items():
+                                if q['total'] == project['min_cost']:
+                                    project['min_quote'] = q['name']
+                                    break
+                    
+                    session['comparisons'] = comparisons
+                    session.modified = True
+            except (ValueError, TypeError):
+                pass
         
         # 見積もり削除
-        elif action == 'delete_quote' and project_id is not None and 0 <= project_id < len(comparisons):
-            quote_key = request.form.get('quote_key', '')
-            project = comparisons[project_id]
-            if quote_key in project['quotations']:
-                del project['quotations'][quote_key]
-                
-                # 最小コストを再計算
-                if project['quotations']:
-                    costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
-                    if costs:
-                        project['min_cost'] = min(costs)
-                        for qk, q in project['quotations'].items():
-                            if q['total'] == project['min_cost']:
-                                project['min_quote'] = q['name']
-                                break
-                else:
-                    project['min_cost'] = 0
-                    project['min_quote'] = None
+        elif action == 'delete_quote':
+            try:
+                project_id = int(request.form.get('project_id', -1))
+                if 0 <= project_id < len(comparisons):
+                    quote_key = request.form.get('quote_key', '')
+                    project = comparisons[project_id]
+                    if quote_key in project['quotations']:
+                        del project['quotations'][quote_key]
+                        
+                        if project['quotations']:
+                            costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
+                            if costs:
+                                project['min_cost'] = min(costs)
+                                for qk, q in project['quotations'].items():
+                                    if q['total'] == project['min_cost']:
+                                        project['min_quote'] = q['name']
+                                        break
+                        else:
+                            project['min_cost'] = 0
+                            project['min_quote'] = None
+                        
+                        session['comparisons'] = comparisons
+                        session.modified = True
+            except (ValueError, TypeError):
+                pass
         
         # プロジェクト削除
-        elif action == 'delete_project' and project_id is not None and 0 <= project_id < len(comparisons):
-            comparisons.pop(project_id)
-        
-        # セッションに保存
-        session['comparisons'] = comparisons
-        session.modified = True
+        elif action == 'delete_project':
+            try:
+                project_id = int(request.form.get('project_id', -1))
+                if 0 <= project_id < len(comparisons):
+                    comparisons.pop(project_id)
+                    session['comparisons'] = comparisons
+                    session.modified = True
+            except (ValueError, TypeError):
+                pass
         
         return redirect(url_for('comparison_tool_page'))
     
     # GETリクエスト：セッションからデータを取得
+    if 'comparisons' not in session:
+        session['comparisons'] = []
+    
     comparisons = session.get('comparisons', [])
     
-    # テンプレートに渡すデータ
     ctx = {
         'page_title': '比較見積もりツール',
         'current_app': 'comparison_tool',
