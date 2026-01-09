@@ -3,14 +3,14 @@
 {% block content %}
 <style>
   .home-container {
-    max-width: 600px;
+    width: 100%;
     margin: 0 auto;
-    padding: 20px 10px;
+    padding: 20px;
   }
 
   .app-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 16px;
     margin-bottom: 100px; /* ホームボタン用スペース確保 */
   }
@@ -18,7 +18,7 @@
   .app-tile {
     background: white;
     border-radius: 20px;
-    padding: 16px 8px;
+    padding: 12px 6px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
@@ -44,21 +44,21 @@
   }
 
   .app-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 16px;
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 8px;
-    font-size: 28px;
+    margin-bottom: 6px;
+    font-size: 24px;
     color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
 
   .app-tile-title {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
     color: #2c3e50;
     margin-bottom: 2px;
     word-break: break-word;
@@ -66,7 +66,7 @@
 
   .app-tile-desc {
     color: #7f8c8d;
-    font-size: 10px;
+    font-size: 9px;
     margin: 0;
     word-break: break-word;
   }
@@ -88,53 +88,22 @@
   .metal-gunmetal { background: linear-gradient(135deg,#2b3338 0%, #50606a 100%); }
   .metal-gold { background: linear-gradient(135deg,#b8860b 0%, #ffd54f 100%); color: #0f172a; }
 
-  @media (max-width: 768px) {
-    .home-container {
-      padding: 16px 8px;
-    }
-
+  /* タブレット用（992px以下） */
+  @media (max-width: 992px) {
     .app-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
     }
 
     .app-tile {
-      padding: 12px 4px;
-      border-radius: 16px;
-    }
-
-    .app-icon {
-      width: 54px;
-      height: 54px;
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-
-    .app-tile-title {
-      font-size: 12px;
-    }
-
-    .app-tile-desc {
-      font-size: 9px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .app-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-
-    .app-tile {
-      padding: 10px 2px;
-      border-radius: 14px;
+      padding: 11px 5px;
     }
 
     .app-icon {
       width: 48px;
       height: 48px;
-      font-size: 20px;
-      margin-bottom: 4px;
+      font-size: 22px;
+      margin-bottom: 5px;
     }
 
     .app-tile-title {
@@ -143,6 +112,70 @@
 
     .app-tile-desc {
       font-size: 8px;
+    }
+  }
+
+  /* 小型タブレット用（768px以下） */
+  @media (max-width: 768px) {
+    .home-container {
+      padding: 16px;
+    }
+
+    .app-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .app-tile {
+      padding: 10px 4px;
+      border-radius: 16px;
+    }
+
+    .app-icon {
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .app-tile-title {
+      font-size: 10px;
+    }
+
+    .app-tile-desc {
+      font-size: 8px;
+    }
+  }
+
+  /* スマートフォン用（576px以下） */
+  @media (max-width: 576px) {
+    .home-container {
+      padding: 12px;
+    }
+
+    .app-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .app-tile {
+      padding: 8px 2px;
+      border-radius: 12px;
+    }
+
+    .app-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+      margin-bottom: 3px;
+    }
+
+    .app-tile-title {
+      font-size: 9px;
+    }
+
+    .app-tile-desc {
+      font-size: 7px;
     }
   }
 </style>
