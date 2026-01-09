@@ -756,133 +756,201 @@ def calculator():
 # ===== 比較見積もりツール =====
 @app.route('/comparison_tool', methods=['GET', 'POST'])
 def comparison_tool_page():
-    """比較見積もりツール
+    """動的テーブル型の比較見積もりツール
     
-    複数のプロジェクトで複数の見積もりを管理・比較するツール。
-    セッションベースでプロジェクトと見積もりを管理する。
+    複数の製品を複数の項目で比較できるツール。
+    セッションベースでテーブル構造とデータを管理する。
     """
     
-    # セッションを永続化させる
     session.permanent = True
     
     if request.method == 'POST':
         action = request.form.get('action')
         
-        # セッションから現在のプロジェクト一覧を取得
-        comparisons = session.get('comparisons', [])
+        # セッションから現在のテーブルデータを取得
+        columns = session.get('comparison_columns', [])
+        rows = session.get('comparison_rows', [])
+        data = session.get('comparison_data', {})
         
-        # プロジェクト追加
-        if action == 'add_project':
-            project_name = request.form.get('project_name', '').strip()
-            if project_name:
-                new_project = {
-                    'project_name': project_name,
-                    'quotations': {},
-                    'items': [],
-                    'min_cost': 0,
-                    'min_quote': None
-                }
-                comparisons.append(new_project)
-                session['comparisons'] = comparisons
+        # 列を追加（製品を追加）
+        if action == 'add_column':
+            col_id = max([c['id'] for c in columns], default=-1) + 1
+            columns.append({'id': col_id, 'name': f'製品{col_id + 1}'})
+            session['comparison_columns'] = columns
+            
+            # 初期画像行がなければ追加
+            if not any(r['type'] == 'image' for r in rows):
+                row_id = max([r['id'] for r in rows], default=-1) + 1
+                rows.append({'id': row_id, 'label': '画像/写真', 'type': 'image'})
+                session['comparison_rows'] = rows
+            
+            session.modified = True
+        
+        # 行を追加（比較項目を追加）
+        elif action == 'add_row':
+            row_type = request.form.get('row_type', 'text')
+            row_id = max([r['id'] for r in rows], default=-1) + 1
+            row_label = {'text': '新規項目', 'number': '数値項目', 'textarea': '説明'}[row_type]
+            rows.append({'id': row_id, 'label': row_label, 'type': row_type})
+            session['comparison_rows'] = rows
+            session.modified = True
+        
+        # 列を削除（製品を削除）
+        elif action == 'delete_column':
+            try:
+                col_id = int(request.form.get('col_id'))
+                columns = [c for c in columns if c['id'] != col_id]
+                session['comparison_columns'] = columns
+                
+                # データから該当列を削除
+                for row_id in data:
+                    if col_id in data[row_id]:
+                        del data[row_id][col_id]
+                session['comparison_data'] = data
                 session.modified = True
-        
-        # 見積もり追加
-        elif action == 'add_quote':
-            try:
-                project_id = int(request.form.get('project_id', -1))
-                if 0 <= project_id < len(comparisons):
-                    quote_name = request.form.get('quote_name', '').strip()
-                    item_name = request.form.get('item_name', '').strip()
-                    item_cost = float(request.form.get('item_cost', 0))
-                    
-                    project = comparisons[project_id]
-                    
-                    if item_name not in project['items']:
-                        project['items'].append(item_name)
-                    
-                    if not quote_name:
-                        quote_name = f"見積もり{len(project['quotations']) + 1}"
-                    
-                    quote_key = f"quote_{len(project['quotations'])}"
-                    
-                    if quote_key not in project['quotations']:
-                        project['quotations'][quote_key] = {
-                            'name': quote_name,
-                            'items': {},
-                            'total': 0
-                        }
-                    
-                    quote = project['quotations'][quote_key]
-                    if item_name not in quote['items']:
-                        quote['items'][item_name] = 0
-                    quote['items'][item_name] += item_cost
-                    quote['total'] = sum(quote['items'].values())
-                    
-                    # 最小コストを計算
-                    if project['quotations']:
-                        costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
-                        if costs:
-                            project['min_cost'] = min(costs)
-                            for qk, q in project['quotations'].items():
-                                if q['total'] == project['min_cost']:
-                                    project['min_quote'] = q['name']
-                                    break
-                    
-                    session['comparisons'] = comparisons
-                    session.modified = True
             except (ValueError, TypeError):
                 pass
         
-        # 見積もり削除
-        elif action == 'delete_quote':
+        # 行を削除（比較項目を削除）
+        elif action == 'delete_row':
             try:
-                project_id = int(request.form.get('project_id', -1))
-                if 0 <= project_id < len(comparisons):
-                    quote_key = request.form.get('quote_key', '')
-                    project = comparisons[project_id]
-                    if quote_key in project['quotations']:
-                        del project['quotations'][quote_key]
-                        
-                        if project['quotations']:
-                            costs = [q['total'] for q in project['quotations'].values() if q['total'] > 0]
-                            if costs:
-                                project['min_cost'] = min(costs)
-                                for qk, q in project['quotations'].items():
-                                    if q['total'] == project['min_cost']:
-                                        project['min_quote'] = q['name']
-                                        break
+                row_id = int(request.form.get('row_id'))
+                rows = [r for r in rows if r['id'] != row_id]
+                session['comparison_rows'] = rows
+                
+                # データから該当行を削除
+                if row_id in data:
+                    del data[row_id]
+                session['comparison_data'] = data
+                session.modified = True
+            except (ValueError, TypeError):
+                pass
+        
+        # データを保存
+        elif action == 'save_data':
+            # フォームから列名を更新
+            for key, value in request.form.items():
+                if key.startswith('col_name_'):
+                    col_id = int(key.replace('col_name_', ''))
+                    for col in columns:
+                        if col['id'] == col_id:
+                            col['name'] = value.strip() if value.strip() else f'製品{col_id + 1}'
+            
+            # フォームから行名を更新
+            for key, value in request.form.items():
+                if key.startswith('row_name_'):
+                    row_id = int(key.replace('row_name_', ''))
+                    for row in rows:
+                        if row['id'] == row_id:
+                            row['label'] = value.strip() if value.strip() else '項目'
+            
+            # フォームからテキストデータを保存
+            for key, value in request.form.items():
+                if key.startswith('data_'):
+                    parts = key.replace('data_', '').split('_')
+                    if len(parts) == 2:
+                        try:
+                            row_id = int(parts[0])
+                            col_id = int(parts[1])
+                            if row_id not in data:
+                                data[row_id] = {}
+                            data[row_id][col_id] = value
+                        except (ValueError, TypeError):
+                            pass
+            
+            # 画像データを処理
+            for key in request.files:
+                if key.startswith('image_'):
+                    parts = key.replace('image_', '').split('_')
+                    if len(parts) == 2:
+                        try:
+                            row_id = int(parts[0])
+                            col_id = int(parts[1])
+                            file = request.files[key]
+                            if file and file.filename:
+                                import base64
+                                image_data = file.read()
+                                encoded = base64.b64encode(image_data).decode('utf-8')
+                                if row_id not in data:
+                                    data[row_id] = {}
+                                data[row_id][col_id] = encoded
+                        except (ValueError, TypeError):
+                            pass
+            
+            session['comparison_columns'] = columns
+            session['comparison_rows'] = rows
+            session['comparison_data'] = data
+            session.modified = True
+        
+        # Excel/CSVエクスポート
+        elif action == 'export_excel':
+            try:
+                import csv
+                from io import StringIO
+                
+                output = StringIO()
+                writer = csv.writer(output)
+                
+                # ヘッダー行（製品名）
+                header = ['比較項目'] + [col['name'] for col in columns]
+                writer.writerow(header)
+                
+                # データ行
+                for row in rows:
+                    row_data = [row['label']]
+                    for col in columns:
+                        value = data.get(row['id'], {}).get(col['id'], '')
+                        # 画像はスキップ
+                        if row['type'] != 'image':
+                            row_data.append(value)
                         else:
-                            project['min_cost'] = 0
-                            project['min_quote'] = None
-                        
-                        session['comparisons'] = comparisons
-                        session.modified = True
-            except (ValueError, TypeError):
-                pass
-        
-        # プロジェクト削除
-        elif action == 'delete_project':
-            try:
-                project_id = int(request.form.get('project_id', -1))
-                if 0 <= project_id < len(comparisons):
-                    comparisons.pop(project_id)
-                    session['comparisons'] = comparisons
-                    session.modified = True
-            except (ValueError, TypeError):
-                pass
+                            row_data.append('[画像]')
+                    writer.writerow(row_data)
+                
+                output.seek(0)
+                return send_file(
+                    StringIO(output.getvalue()),
+                    mimetype='text/csv',
+                    as_attachment=True,
+                    download_name='comparison_table.csv'
+                )
+            except Exception as e:
+                print(f"Export error: {e}")
+                flash('エクスポート中にエラーが発生しました。', 'warning')
         
         return redirect(url_for('comparison_tool_page'))
     
-    # GETリクエスト：セッションからデータを取得
-    if 'comparisons' not in session:
-        session['comparisons'] = []
+    # GETリクエスト：セッションからデータを取得して表示
+    if 'comparison_columns' not in session:
+        # 初期状態：2つのサンプル製品を作成
+        session['comparison_columns'] = [
+            {'id': 0, 'name': '製品A'},
+            {'id': 1, 'name': '製品B'}
+        ]
     
-    comparisons = session.get('comparisons', [])
+    if 'comparison_rows' not in session:
+        # 初期状態：画像行と基本項目を作成
+        session['comparison_rows'] = [
+            {'id': 0, 'label': '画像/写真', 'type': 'image'},
+            {'id': 1, 'label': '性能', 'type': 'text'},
+            {'id': 2, 'label': '用途', 'type': 'text'},
+            {'id': 3, 'label': '会社名', 'type': 'text'},
+            {'id': 4, 'label': '金額', 'type': 'text'}
+        ]
+    
+    if 'comparison_data' not in session:
+        session['comparison_data'] = {}
+    
+    columns = session.get('comparison_columns', [])
+    rows = session.get('comparison_rows', [])
+    data = session.get('comparison_data', {})
     
     ctx = {
-        'page_title': '比較見積もりツール',
+        'page_title': '比較見積もりテーブル',
         'current_app': 'comparison_tool',
-        'comparisons': comparisons
+        'columns': columns,
+        'rows': rows,
+        'data': data
     }
     return render_template('comparison_tool.html', **ctx)
 

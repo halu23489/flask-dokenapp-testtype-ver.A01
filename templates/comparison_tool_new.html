@@ -1,0 +1,390 @@
+{% extends "layout.html" %}
+
+{# タイトルを確実に親テンプレートに渡す #}
+{% set page_title = '比較見積もりツール' %}
+
+{% block extra_head %}
+    {# Tailwind CSSの読み込みを削除し、汎用的なCSSを使用 #}
+    <style>
+        /* 汎用的なスタイル設定 */
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        #comparisonTable { 
+            border-collapse: collapse; 
+            width: 100%; 
+            border: 1px solid #ccc; 
+            /* 標準レイアウトに馴染むよう最小限のボーダーのみ */
+        }
+        #comparisonTable th, #comparisonTable td { 
+            border: 1px solid #e0e0e0; 
+            padding: 8px 12px; 
+            vertical-align: middle; 
+            font-size: 14px;
+        }
+        
+        /* 固定ヘッダー (比較項目) */
+        .sticky-header { 
+            position: sticky; 
+            left: 0; 
+            background-color: #f0f9ff; /* 薄い青 */
+            z-index: 10; 
+            font-weight: bold; 
+            min-width: 120px;
+        }
+        
+        /* 編集可能セルのスタイル */
+        .editable { 
+            outline: none; 
+            border-bottom: 1px dashed #aaa; 
+            padding: 4px; 
+            min-width: 100%; 
+            display: block; 
+            box-sizing: border-box;
+            background-color: transparent; /* 背景を透明に */
+        }
+        .editable:focus {
+            border-bottom: 1px solid #007bff;
+            background-color: #fffdee; /* 編集中のハイライト */
+        }
+        
+        /* ヘッダーと行ヘッダーの背景色 */
+        .col-header-input { background: #e0f2fe; text-align: center; font-weight: bold; }
+        .col-header-input input { 
+            background: transparent; 
+            text-align: center; 
+            border: none; 
+            font-weight: bold; 
+            width: 100%; 
+            padding: 0;
+        }
+        .row-header { background: #f0f9ff; text-align: left; }
+        .highlight-row { background: #fffde7; font-weight: bold; } /* 金額行のハイライト */
+        .data-cell { background: #ffffff; }
+
+        /* ボタンの標準化 */
+        .button-group { margin-bottom: 20px; display: flex; gap: 10px; }
+        .button-group button { 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #addColumn { background-color: #4CAF50; color: white; }
+        #addColumn:hover { background-color: #45a049; }
+        #addRow { background-color: #2196F3; color: white; }
+        #addRow:hover { background-color: #0b7dda; }
+        #exportCsv { background-color: #757575; color: white; }
+        #exportCsv:hover { background-color: #616161; }
+
+        /* 画像プレビュー */
+        .image-preview { 
+            width: 100px; 
+            height: 100px; 
+            object-fit: cover; 
+            border-radius: 4px; 
+            margin: 8px auto 0; 
+            display: block; 
+            border: 1px solid #eee; 
+        }
+        .hidden { display: none !important; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-area">
+    <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid #2196F3;">
+        業務効率化 - 比較テーブル
+    </h2>
+
+    <div class="button-group">
+        <button id="addColumn">
+            + 比較対象を追加
+        </button>
+        <button id="addRow">
+            + 比較項目を追加
+        </button>
+        <button id="exportCsv">
+            CSVダウンロード
+        </button>
+    </div>
+
+    <!-- 比較テーブルコンテナ -->
+    <div class="table-container">
+        <table id="comparisonTable">
+            <!-- テーブルヘッダー (比較項目と製品名) -->
+            <thead>
+                <tr id="tableHeader">
+                    <!-- 比較項目 (固定列) -->
+                    <th class="sticky-header">
+                        比較項目
+                    </th>
+                    <!-- 製品1 (Editable) -->
+                    <th class="col-header-input" colspan="1">
+                        <input type="text" value="製品A / 見積もりA" class="editable" style="text-align: center;">
+                    </th>
+                    <!-- 製品2 (Editable) -->
+                    <th class="col-header-input" colspan="1">
+                        <input type="text" value="製品B / 見積もりB" class="editable" style="text-align: center;">
+                    </th>
+                </tr>
+            </thead>
+            <!-- テーブルボディ (比較内容) -->
+            <tbody id="tableBody">
+                <!-- 0行目: 画像/写真取り込み (ファイル入力) -->
+                <tr data-type="image-row">
+                    <td class="sticky-header row-header">画像/写真</td>
+                    <td class="data-cell" data-col="1" style="text-align: center;">
+                        <input type="file" class="hidden image-input" accept="image/*" id="file1" onchange="previewImage(this, 1)">
+                        <label for="file1" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <img class="image-preview hidden" id="preview1" alt="画像プレビュー">
+                    </td>
+                    <td class="data-cell" data-col="2" style="text-align: center;">
+                        <input type="file" class="hidden image-input" accept="image/*" id="file2" onchange="previewImage(this, 2)">
+                        <label for="file2" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <img class="image-preview hidden" id="preview2" alt="画像プレビュー">
+                    </td>
+                </tr>
+                <!-- 1行目以降: 比較項目 (Editable Cells) -->
+                <!-- 初期項目: 性能 -->
+                <tr data-row-id="1" data-type="data-row">
+                    <td class="sticky-header row-header">
+                        <span contenteditable="true" class="editable" data-item="性能">性能</span>
+                    </td>
+                    <td class="data-cell" data-col="1">
+                        <span contenteditable="true" class="editable">高速処理が可能</span>
+                    </td>
+                    <td class="data-cell" data-col="2">
+                        <span contenteditable="true" class="editable">安定性に優れる</span>
+                    </td>
+                </tr>
+                <!-- 初期項目: 用途 -->
+                <tr data-row-id="2" data-type="data-row">
+                    <td class="sticky-header row-header">
+                        <span contenteditable="true" class="editable" data-item="用途">用途</span>
+                    </td>
+                    <td class="data-cell" data-col="1">
+                        <span contenteditable="true" class="editable">小規模工事向け</span>
+                    </td>
+                    <td class="data-cell" data-col="2">
+                        <span contenteditable="true" class="editable">大規模プロジェクト向け</span>
+                    </td>
+                </tr>
+                <!-- 初期項目: 金額 -->
+                <tr data-row-id="3" data-type="data-row" class="highlight-row">
+                    <td class="sticky-header row-header" style="color: #c0392b;">
+                        <span contenteditable="true" class="editable" data-item="金額">金額</span>
+                    </td>
+                    <td class="data-cell" data-col="1" style="font-weight: bold;">
+                        <span contenteditable="true" class="editable">¥ 50,000</span>
+                    </td>
+                    <td class="data-cell" data-col="2" style="font-weight: bold;">
+                        <span contenteditable="true" class="editable">¥ 75,000</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const table = document.getElementById('comparisonTable');
+        const tableHeaderRow = document.getElementById('tableHeader');
+        const tableBody = document.getElementById('tableBody');
+        const addColumnButton = document.getElementById('addColumn');
+        const addRowButton = document.getElementById('addRow');
+        const exportCsvButton = document.getElementById('exportCsv');
+        
+        // 1. 列の数を初期化 (比較項目列を除く)
+        let colCount = tableHeaderRow.querySelectorAll('.col-header-input').length; // 初期値: 2 (製品A, 製品B)
+
+        // 2. 比較データ行 (画像行を除く) の最大のIDを初期化
+        const existingRows = tableBody.querySelectorAll('tr[data-type="data-row"]');
+        let nextDataRowId = 0;
+        existingRows.forEach(row => {
+            const id = parseInt(row.getAttribute('data-row-id'));
+            if (!isNaN(id) && id > nextDataRowId) {
+                nextDataRowId = id;
+            }
+        });
+
+        /**
+         * 画像プレビューを処理する関数
+         * @param {HTMLInputElement} input - ファイル入力エレメント
+         * @param {number} colIndex - 列のインデックス (1, 2, 3, ...)
+         */
+        window.previewImage = function(input, colIndex) {
+            const preview = document.getElementById(`preview${colIndex}`);
+            const label = input.nextElementSibling;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    // ファイル名を表示 (長すぎる場合は省略)
+                    const fileName = input.files[0].name;
+                    label.textContent = fileName.length > 10 ? 
+                                        fileName.substring(0, 10) + '...' : 
+                                        fileName;
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.src = "";
+                preview.classList.add('hidden');
+                label.textContent = '画像を選択';
+            }
+        }
+
+        // 比較対象（列）を追加
+        addColumnButton.addEventListener('click', () => {
+            colCount++; // 新しい列ID 
+            
+            // 1. ヘッダー列を追加
+            const newHeader = document.createElement('th');
+            newHeader.className = 'col-header-input';
+            newHeader.setAttribute('colspan', '1');
+            // style="text-align: center;" をeditableにも適用
+            newHeader.innerHTML = `<input type="text" value="新規対象 ${colCount}" class="editable" style="text-align: center;">`;
+            tableHeaderRow.appendChild(newHeader);
+
+            // 2. ボディの全行にデータセルを追加
+            for (let i = 0; i < tableBody.rows.length; i++) {
+                const row = tableBody.rows[i];
+                const newCell = row.insertCell(-1);
+                newCell.setAttribute('data-col', colCount);
+                newCell.className = 'data-cell';
+                
+                if (row.getAttribute('data-type') === 'image-row') {
+                    // 画像/写真行
+                    newCell.style.textAlign = 'center'; // 画像セルは中央寄せ
+                    newCell.innerHTML = `
+                        <input type="file" class="hidden image-input" accept="image/*" id="file${colCount}" onchange="previewImage(this, ${colCount})">
+                        <label for="file${colCount}" style="color: #007bff; cursor: pointer;">画像を選択</label>
+                        <img class="image-preview hidden" id="preview${colCount}" alt="画像プレビュー">
+                    `;
+                } else {
+                    // 通常の比較項目行
+                    newCell.innerHTML = `<span contenteditable="true" class="editable"></span>`;
+                    
+                    // 金額行のスタイルをコピー
+                    if (row.classList.contains('highlight-row')) {
+                         newCell.style.fontWeight = 'bold';
+                         newCell.classList.add('highlight-row'); // 行全体に適用されているクラスをセルにもコピー (CSSで調整)
+                    }
+                }
+            }
+        });
+
+        // 比較項目（行）を追加
+        addRowButton.addEventListener('click', () => {
+            nextDataRowId++; // 新しい行ID
+            
+            const newRow = tableBody.insertRow(-1);
+            newRow.setAttribute('data-row-id', nextDataRowId);
+            newRow.setAttribute('data-type', 'data-row'); // 明示的にデータ行であることを指定
+
+            // 1. 項目ヘッダーセル (Sticky)
+            const headerCell = newRow.insertCell(0);
+            headerCell.className = 'sticky-header row-header';
+            headerCell.innerHTML = `<span contenteditable="true" class="editable" data-item="新規項目${nextDataRowId}">新規項目</span>`;
+
+            // 2. データセル (colCountの数だけ追加)
+            for (let i = 1; i <= colCount; i++) {
+                const dataCell = newRow.insertCell(i);
+                dataCell.className = 'data-cell';
+                dataCell.setAttribute('data-col', i);
+                dataCell.innerHTML = `<span contenteditable="true" class="editable"></span>`;
+            }
+        });
+        
+        /**
+         * CSVエスケープ処理
+         * - 値にカンマ、改行、ダブルクォートが含まれていれば、全体をダブルクォートで囲み、内部のダブルクォートを二重にする。
+         */
+        const csvEscape = (value) => {
+            if (value === null || value === undefined) return '';
+            let val = String(value).trim();
+            
+            // 値にカンマ、改行、ダブルクォートが含まれていなければエスケープ不要
+            if (!val.includes(',') && !val.includes('\n') && !val.includes('\r') && !val.includes('"')) {
+                return val;
+            }
+            
+            // 文字列化し、改行をスペースに、内部のダブルクォートを二重にエスケープ
+            val = val.replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, '""');
+            
+            // 値全体をダブルクォートで囲む
+            return `"${val}"`;
+        };
+
+        // CSVダウンロード機能
+        exportCsvButton.addEventListener('click', () => {
+            let csv = [];
+            const rows = tableBody.rows;
+
+            // 1. ヘッダー行 (比較項目 + 製品名) を取得
+            let header = [];
+            header.push(csvEscape('比較項目')); // 常に最初の列は「比較項目」
+            
+            const headerInputs = tableHeaderRow.querySelectorAll('.col-header-input input');
+            headerInputs.forEach(input => {
+                header.push(csvEscape(input.value));
+            }); 
+            csv.push(header.join(','));
+
+            // 2. データ行を取得
+            for (let i = 0; i < rows.length; i++) {
+                const rowElement = rows[i];
+                const cells = rowElement.querySelectorAll('td');
+                let row = [];
+                
+                // 2.1. 比較項目名 (最初のセル)
+                const itemCell = cells[0];
+                let itemCellContent = '';
+
+                if (rowElement.getAttribute('data-type') === 'image-row') {
+                    itemCellContent = itemCell.textContent.trim(); // "画像/写真"
+                } else {
+                    const contentElement = itemCell.querySelector('span[contenteditable="true"]');
+                    itemCellContent = contentElement ? contentElement.textContent : '';
+                }
+                
+                row.push(csvEscape(itemCellContent));
+
+                // 2.2. 各比較対象のデータ
+                for (let j = 1; j < cells.length; j++) {
+                    const cell = cells[j];
+                    let cellValue = '';
+                    
+                    if (rowElement.getAttribute('data-type') === 'image-row') { 
+                        // 画像行: ファイル名を取得
+                        const fileInput = cell.querySelector('.image-input');
+                        cellValue = fileInput && fileInput.files[0] ? fileInput.files[0].name : '';
+                    } else {
+                        // 通常のデータ行: contenteditableの内容を取得
+                        const contentElement = cell.querySelector('span[contenteditable="true"]');
+                        cellValue = contentElement ? contentElement.textContent : '';
+                    }
+                    
+                    row.push(csvEscape(cellValue));
+                }
+                csv.push(row.join(','));
+            }
+
+            // CSVデータを作成
+            const csvString = csv.join('\n');
+            
+            // ダウンロード処理 (BOM付きUTF-8で日本語対応)
+            const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' }); 
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '比較見積もりデータ.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    });
+</script>
+{% endblock %}

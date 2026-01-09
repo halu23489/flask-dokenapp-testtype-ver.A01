@@ -3,244 +3,180 @@
 {% block extra_head %}
     <style>
         .comparison-container {
-            max-width: 1200px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 20px;
+            background-color: white;
         }
 
-        .project-section {
-            margin-bottom: 30px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-        }
-
-        .project-header {
+        .button-group {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .project-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .delete-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .delete-btn:hover {
-            background-color: #c82333;
-        }
-
-        .quotation-form {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr auto;
             gap: 10px;
             margin-bottom: 20px;
-            align-items: flex-end;
+            flex-wrap: wrap;
         }
 
-        .quotation-form input,
-        .quotation-form select {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .add-item-btn {
-            background-color: #28a745;
-            color: white;
+        .btn-action {
+            padding: 12px 20px;
             border: none;
-            padding: 10px 16px;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
+            font-weight: bold;
+            color: white;
             font-size: 14px;
+            transition: opacity 0.2s;
         }
 
-        .add-item-btn:hover {
-            background-color: #218838;
+        .btn-add-product {
+            background-color: #28a745;
         }
 
-        .quotation-table {
+        .btn-add-item {
+            background-color: #007bff;
+        }
+
+        .btn-export {
+            background-color: #6c757d;
+        }
+
+        .btn-action:hover {
+            opacity: 0.85;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+        }
+
+        .comparison-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
             background-color: white;
+            margin-bottom: 20px;
         }
 
-        .quotation-table th,
-        .quotation-table td {
+        .comparison-table th,
+        .comparison-table td {
             border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
         }
 
-        .quotation-table th {
-            background-color: #007bff;
-            color: white;
-            font-weight: bold;
-        }
-
-        .quotation-table tr:hover {
-            background-color: #f5f5f5;
-        }
-
-        .delete-item-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .delete-item-btn:hover {
-            background-color: #c82333;
-        }
-
-        .total-row {
-            font-weight: bold;
+        .comparison-table th {
             background-color: #e7f3ff;
-        }
-
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .quote-card {
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: white;
-        }
-
-        .quote-card.min-cost {
-            border-color: #28a745;
-            background-color: #f0fff4;
-        }
-
-        .quote-card h4 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }
-
-        .quote-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .quote-item-name {
-            flex-grow: 1;
-        }
-
-        .quote-item-cost {
             font-weight: bold;
-            text-align: right;
+            min-height: 40px;
+        }
+
+        .row-header {
+            background-color: #f0f9ff;
+            font-weight: bold;
+            text-align: left;
             min-width: 100px;
         }
 
-        .quote-total {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #333;
-            font-size: 18px;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
+        .header-cell {
+            position: relative;
         }
 
-        .quote-total-cost {
-            color: #007bff;
-        }
-
-        .cost-diff {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #fff3cd;
-            border-radius: 4px;
-            font-size: 14px;
-            color: #856404;
-        }
-
-        .no-projects {
-            text-align: center;
-            color: #999;
-            padding: 40px;
-            font-size: 18px;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background-color: #218838;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .form-group input {
+        .header-input {
             width: 100%;
-            padding: 10px;
+            padding: 8px 4px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
             box-sizing: border-box;
+            border-radius: 3px;
+        }
+
+        .header-input:focus {
+            outline: none;
+            border-color: #007bff;
+            background-color: #fffacd;
+        }
+
+        .cell-input {
+            width: 100%;
+            min-height: 40px;
+            padding: 8px;
+            border: 1px solid #f0f0f0;
+            box-sizing: border-box;
+            font-size: 13px;
+            border-radius: 3px;
+        }
+
+        .cell-input:focus {
+            outline: none;
+            border-color: #007bff;
+            background-color: #fffacd;
+        }
+
+        textarea.cell-input {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .image-cell {
+            text-align: center;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 120px;
+            object-fit: contain;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .image-input {
+            font-size: 12px;
+        }
+
+        .row-controls {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .column-controls {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            margin-top: 4px;
+        }
+
+        .item-type-selector {
+            font-size: 12px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: white;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .export-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
         }
     </style>
 {% endblock %}
@@ -249,147 +185,122 @@
 <div class="comparison-container">
     <div class="card shadow mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">⚖️ 比較見積もりツール</h5>
+            <h5 class="mb-0">📊 比較見積もりテーブル</h5>
         </div>
         <div class="card-body">
-            <p class="text-muted">複数の見積もりを比較して、最適なプロジェクトを選択できます。</p>
+            <p class="text-muted">複数の製品を比較するための表を自由に編集できます。</p>
 
-            <div class="action-buttons">
-                <button class="btn btn-success" onclick="addNewProject()">📌 新規プロジェクト作成</button>
+            <div class="button-group">
+                <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
+                    <input type="hidden" name="action" value="add_column">
+                    <button type="submit" class="btn-action btn-add-product">+ 比較対象を追加</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
+                    <input type="hidden" name="action" value="add_row">
+                    <select name="row_type" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px;">
+                        <option value="text">テキスト項目</option>
+                        <option value="number">数値項目</option>
+                        <option value="textarea">説明文</option>
+                    </select>
+                    <button type="submit" class="btn-action btn-add-item">+ 比較項目を追加</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
+                    <input type="hidden" name="action" value="export_excel">
+                    <button type="submit" class="btn-action btn-export">📥 CSVダウンロード</button>
+                </form>
             </div>
 
-            {% if not comparisons or comparisons|length == 0 %}
-                <div class="no-projects">
-                    プロジェクトがまだありません。「新規プロジェクト作成」ボタンをクリックして開始してください。
-                </div>
-            {% else %}
-                {% for comparison in comparisons %}
-                    <div class="project-section">
-                        <div class="project-header">
-                            <div class="project-title">{{ comparison.project_name or 'プロジェクト' }}</div>
-                            <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
-                                <input type="hidden" name="action" value="delete_project">
-                                <input type="hidden" name="project_id" value="{{ loop.index0 }}">
-                                <button type="submit" class="delete-btn" onclick="return confirm('このプロジェクトを削除しますか？')">削除</button>
-                            </form>
-                        </div>
-
-                        {# 見積もり入力フォーム #}
-                        <form method="POST" action="{{ url_for('comparison_tool_page') }}" class="quotation-form">
-                            <input type="hidden" name="action" value="add_quote">
-                            <input type="hidden" name="project_id" value="{{ loop.index0 }}">
-                            <input type="text" name="quote_name" placeholder="見積もり名（例：A社見積）" required>
-                            <input type="number" name="item_name" placeholder="項目名" step="1" required>
-                            <input type="number" name="item_cost" placeholder="金額" step="0.01" required>
-                            <button type="submit" class="add-item-btn">追加</button>
-                        </form>
-
-                        {# 比較テーブル表示 #}
-                        {% if comparison.quotations %}
-                            <table class="quotation-table">
-                                <thead>
-                                    <tr>
-                                        <th>見積もり名</th>
-                                        {% for item_key in comparison.items %}
-                                            <th>{{ item_key }}</th>
-                                        {% endfor %}
-                                        <th>合計</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for quote_key, quote_data in comparison.quotations.items() %}
-                                        <tr>
-                                            <td><strong>{{ quote_data.name }}</strong></td>
-                                            {% for item_key in comparison.items %}
-                                                <td>
-                                                    {% set cost = quote_data.items.get(item_key, 0) %}
-                                                    {{ "¥{:,.0f}".format(cost) if cost else '-' }}
-                                                </td>
-                                            {% endfor %}
-                                            <td class="total-row">
-                                                ¥{{ "{:,.0f}".format(quote_data.total or 0) }}
-                                            </td>
-                                            <td>
+            {% if columns and columns|length > 0 and rows and rows|length > 0 %}
+                <form method="POST" action="{{ url_for('comparison_tool_page') }}" id="comparisonForm">
+                    <input type="hidden" name="action" value="save_data">
+                    
+                    <div style="overflow-x: auto;">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px; background-color: white;"></th>
+                                    {% for col in columns %}
+                                        <th class="header-cell">
+                                            <input type="text" 
+                                                   class="header-input" 
+                                                   name="col_name_{{ col.id }}" 
+                                                   value="{{ col.name }}" 
+                                                   placeholder="製品名">
+                                            <div class="column-controls">
                                                 <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
-                                                    <input type="hidden" name="action" value="delete_quote">
-                                                    <input type="hidden" name="project_id" value="{{ loop.index0 }}">
-                                                    <input type="hidden" name="quote_key" value="{{ quote_key }}">
-                                                    <button type="submit" class="delete-item-btn" onclick="return confirm('この見積もりを削除しますか？')">削除</button>
+                                                    <input type="hidden" name="action" value="delete_column">
+                                                    <input type="hidden" name="col_id" value="{{ col.id }}">
+                                                    <button type="submit" class="btn-action btn-small btn-delete" 
+                                                            onclick="return confirm('この列を削除しますか？')">削除</button>
                                                 </form>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-
-                            {# 最小コスト情報 #}
-                            {% set min_cost = comparison.min_cost %}
-                            {% set min_quote = comparison.min_quote %}
-                            {% if min_quote %}
-                                <div class="comparison-grid">
-                                    {% for quote_key, quote_data in comparison.quotations.items() %}
-                                        <div class="quote-card {% if quote_data.total == min_cost %}min-cost{% endif %}">
-                                            <h4>{{ quote_data.name }}</h4>
-                                            {% for item_key in comparison.items %}
-                                                {% set cost = quote_data.items.get(item_key, 0) %}
-                                                {% if cost %}
-                                                    <div class="quote-item">
-                                                        <div class="quote-item-name">{{ item_key }}</div>
-                                                        <div class="quote-item-cost">¥{{ "{:,.0f}".format(cost) }}</div>
-                                                    </div>
-                                                {% endif %}
-                                            {% endfor %}
-                                            <div class="quote-total">
-                                                <span>合計金額:</span>
-                                                <span class="quote-total-cost">¥{{ "{:,.0f}".format(quote_data.total or 0) }}</span>
                                             </div>
-                                            {% if quote_data.total != min_cost and min_cost > 0 %}
-                                                <div class="cost-diff">
-                                                    差額: +¥{{ "{:,.0f}".format(quote_data.total - min_cost) }}
-                                                </div>
-                                            {% elif quote_data.total == min_cost and min_cost > 0 %}
-                                                <div class="cost-diff" style="background-color: #d4edda; color: #155724;">
-                                                    ✓ 最小コスト
-                                                </div>
-                                            {% endif %}
-                                        </div>
+                                        </th>
                                     {% endfor %}
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <p class="text-muted">見積もりがまだありません。上のフォームで追加してください。</p>
-                        {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rows %}
+                                    <tr>
+                                        <td class="row-header">
+                                            <input type="text" 
+                                                   class="header-input" 
+                                                   name="row_name_{{ row.id }}" 
+                                                   value="{{ row.label }}" 
+                                                   placeholder="項目名"
+                                                   style="width: 100%; text-align: left;">
+                                            <div class="row-controls" style="margin-top: 4px;">
+                                                <form method="POST" action="{{ url_for('comparison_tool_page') }}" style="display: inline;">
+                                                    <input type="hidden" name="action" value="delete_row">
+                                                    <input type="hidden" name="row_id" value="{{ row.id }}">
+                                                    <button type="submit" class="btn-action btn-small btn-delete"
+                                                            onclick="return confirm('この行を削除しますか？')">削除</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        {% for col in columns %}
+                                            <td>
+                                                {% if row.type == 'image' %}
+                                                    <div class="image-cell">
+                                                        {% set img_data = data.get(row.id, {}).get(col.id) %}
+                                                        {% if img_data %}
+                                                            <img src="data:image/jpeg;base64,{{ img_data }}" class="image-preview">
+                                                        {% endif %}
+                                                        <input type="file" 
+                                                               name="image_{{ row.id }}_{{ col.id }}" 
+                                                               accept="image/*" 
+                                                               class="image-input">
+                                                    </div>
+                                                {% elif row.type == 'textarea' %}
+                                                    <textarea class="cell-input" 
+                                                              name="data_{{ row.id }}_{{ col.id }}"
+                                                              placeholder="入力してください">{{ data.get(row.id, {}).get(col.id, '') }}</textarea>
+                                                {% else %}
+                                                    <input type="text" 
+                                                           class="cell-input" 
+                                                           name="data_{{ row.id }}_{{ col.id }}"
+                                                           value="{{ data.get(row.id, {}).get(col.id, '') }}"
+                                                           placeholder="入力してください">
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                {% endfor %}
+
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn-action btn-add-item">💾 データを保存</button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="no-data">
+                    まず「比較対象を追加」ボタンで製品を追加し、「比較項目を追加」で項目を追加してください。
+                </div>
             {% endif %}
         </div>
     </div>
 </div>
-
-<script>
-function addNewProject() {
-    const projectName = prompt('プロジェクト名を入力してください:');
-    if (projectName) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{{ url_for("comparison_tool_page") }}';
-        
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = 'add_project';
-        form.appendChild(actionInput);
-        
-        const nameInput = document.createElement('input');
-        nameInput.type = 'hidden';
-        nameInput.name = 'project_name';
-        nameInput.value = projectName;
-        form.appendChild(nameInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-</script>
 {% endblock %}
