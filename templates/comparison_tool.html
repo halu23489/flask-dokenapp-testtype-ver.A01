@@ -1,13 +1,249 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="card shadow mb-4">
-    <div class="card-header bg-secondary text-white">
-        <h5 class="mb-0">比較見積もりツール</h5>
+<style>
+  .comparison-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .comparison-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .quotation-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+  }
+
+  .quotation-table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+  }
+
+  .quotation-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .quotation-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .quotation-box {
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+  }
+
+  .amount-high {
+    color: #dc3545;
+    font-weight: 600;
+  }
+
+  .amount-low {
+    color: #198754;
+    font-weight: 600;
+  }
+
+  .amount-neutral {
+    color: #6c757d;
+  }
+
+  .btn-group-inline {
+    display: flex;
+    gap: 8px;
+  }
+
+  .add-item-row {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .add-item-row input {
+    flex: 1;
+  }
+
+  @media (max-width: 768px) {
+    .quotation-table {
+      font-size: 14px;
+    }
+
+    .quotation-table th,
+    .quotation-table td {
+      padding: 8px;
+    }
+  }
+</style>
+
+<div class="comparison-container">
+  <!-- 新規比較プロジェクト追加 -->
+  <div class="comparison-card">
+    <h5>新しい比較プロジェクトを作成</h5>
+    <form method="POST" class="mt-3">
+      <div class="row">
+        <div class="col-md-8">
+          <input type="text" class="form-control" name="project_name" placeholder="プロジェクト名（例：○○工事見積もり比較）" required>
+        </div>
+        <div class="col-md-4">
+          <input type="hidden" name="action" value="add">
+          <button type="submit" class="btn btn-primary w-100">プロジェクトを作成</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- 既存の比較プロジェクト表示 -->
+  {% if comparisons %}
+    {% for comp in comparisons %}
+      <div class="comparison-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4>{{ comp.project_name }}</h4>
+          <form method="POST" style="display: inline;">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="comp_id" value="{{ comp.id }}">
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('削除してもよろしいですか？')">削除</button>
+          </form>
+        </div>
+
+        <!-- 見積もり比較テーブル -->
+        {% if comp.quotations %}
+          <div class="table-responsive">
+            <table class="quotation-table">
+              <thead>
+                <tr>
+                  <th>業者名</th>
+                  {% for quote in comp.quotations %}
+                    <th>{{ quote.contractor }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% set all_items = [] %}
+                {% for quote in comp.quotations %}
+                  {% set _ = all_items.extend(quote.items) %}
+                {% endfor %}
+                {% set unique_items = all_items | unique | list %}
+                
+                {% for item in unique_items %}
+                  <tr>
+                    <td><strong>{{ item }}</strong></td>
+                    {% for quote in comp.quotations %}
+                      {% set item_index = quote.items.index(item) if item in quote.items else -1 %}
+                      <td>
+                        {% if item_index >= 0 %}
+                          数量: {{ quote.quantities[item_index] }} × ¥{{ "{:,.0f}".format(quote.unit_prices[item_index]) }}
+                          <br>
+                          <small>小計: ¥{{ "{:,.0f}".format(quote.quantities[item_index] * quote.unit_prices[item_index]) }}</small>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+
+                <!-- 合計金額行 -->
+                <tr style="background: #e7f3ff; font-weight: 600;">
+                  <td><strong>合計金額</strong></td>
+                  {% for quote in comp.quotations %}
+                    <td class="{% if loop.first %}amount-low{% elif loop.last %}amount-high{% else %}amount-neutral{% endif %}">
+                      ¥{{ "{:,.0f}".format(quote.total_amount) }}
+                    </td>
+                  {% endfor %}
+                </tr>
+
+                <!-- 差額計算 -->
+                {% if comp.quotations | length > 1 %}
+                  <tr style="background: #fff3cd;">
+                    <td><strong>最安値との差</strong></td>
+                    {% set min_amount = comp.quotations | map(attribute='total_amount') | min %}
+                    {% for quote in comp.quotations %}
+                      <td>
+                        {% if quote.total_amount == min_amount %}
+                          <span class="badge bg-success">最安値</span>
+                        {% else %}
+                          + ¥{{ "{:,.0f}".format(quote.total_amount - min_amount) }}
+                        {% endif %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert alert-info">
+            まだ見積もりが登録されていません。下のフォームから見積もりを追加してください。
+          </div>
+        {% endif %}
+
+        <!-- 見積もり追加フォーム -->
+        <div class="quotation-box">
+          <h6>新しい見積もりを追加</h6>
+          <form method="POST" class="mt-3">
+            <input type="hidden" name="action" value="add_quote">
+            <input type="hidden" name="comp_id" value="{{ comp.id }}">
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">業者名</label>
+                <input type="text" class="form-control" name="contractor" placeholder="例：〇〇建設" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">合計金額</label>
+                <input type="number" class="form-control" name="total_amount" placeholder="0" step="1" required>
+              </div>
+            </div>
+
+            <label class="form-label">工事項目と単価</label>
+            <div id="items-container">
+              <div class="add-item-row">
+                <input type="text" class="form-control" name="items[]" placeholder="工事項目名" required>
+                <input type="number" class="form-control" name="quantities[]" placeholder="数量" step="0.01" required>
+                <input type="number" class="form-control" name="unit_prices[]" placeholder="単価" step="1" required>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addItemRow()">+ 項目を追加</button>
+            <div class="mt-3">
+              <button type="submit" class="btn btn-primary">見積もりを追加</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info">
+      <strong>見積もり比較ツール</strong><br>
+      複数の業者から取得した見積もりを並べて比較できます。上のフォームから新しいプロジェクトを作成してください。
     </div>
-    <div class="card-body">
-        <p>複数の見積もりを比較できるツールです。開発中です。</p>
-        <div class="alert alert-info">このツールでは、複数の施工業者の見積もりを並べて比較し、単価や総額の違いを視覚的に分析できるようになります。</div>
-    </div>
+  {% endif %}
 </div>
+
+<script>
+  function addItemRow() {
+    const container = document.getElementById('items-container');
+    const row = document.createElement('div');
+    row.className = 'add-item-row';
+    row.innerHTML = `
+      <input type="text" class="form-control" name="items[]" placeholder="工事項目名" required>
+      <input type="number" class="form-control" name="quantities[]" placeholder="数量" step="0.01" required>
+      <input type="number" class="form-control" name="unit_prices[]" placeholder="単価" step="1" required>
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">削除</button>
+    `;
+    container.appendChild(row);
+  }
+</script>
 {% endblock %}

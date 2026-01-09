@@ -741,11 +741,61 @@ def calculator():
     return render_template('calc.html', **ctx)
 
 # ===== 比較見積もりツール =====
-@app.route('/comparison_tool')
+@app.route('/comparison_tool', methods=['GET', 'POST'])
 def comparison_tool_page():
+    comparisons = session.get('comparisons', [])
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'add':
+            # 新しい見積もり比較を追加
+            comparison = {
+                'id': len(comparisons) + 1,
+                'project_name': request.form.get('project_name', ''),
+                'quotations': []
+            }
+            session['comparisons'] = comparisons + [comparison]
+            return redirect(url_for('comparison_tool_page'))
+        
+        elif action == 'add_quote':
+            # 既存の比較に見積もりを追加
+            comp_id = int(request.form.get('comp_id', 0))
+            quotation = {
+                'id': request.form.get('quote_id', ''),
+                'contractor': request.form.get('contractor', ''),
+                'items': request.form.getlist('items[]'),
+                'quantities': request.form.getlist('quantities[]'),
+                'unit_prices': [safe_float(x) for x in request.form.getlist('unit_prices[]')],
+                'total_amount': safe_float(request.form.get('total_amount', 0))
+            }
+            
+            # 小計を計算
+            total = sum(q * p for q, p in zip(
+                [safe_float(x) for x in request.form.getlist('quantities[]')],
+                quotation['unit_prices']
+            ))
+            quotation['total_amount'] = total
+            
+            for comp in comparisons:
+                if comp['id'] == comp_id:
+                    comp['quotations'].append(quotation)
+                    break
+            
+            session['comparisons'] = comparisons
+            return redirect(url_for('comparison_tool_page'))
+        
+        elif action == 'delete':
+            # 比較を削除
+            comp_id = int(request.form.get('comp_id', 0))
+            comparisons = [c for c in comparisons if c['id'] != comp_id]
+            session['comparisons'] = comparisons
+            return redirect(url_for('comparison_tool_page'))
+    
     ctx = {
         'page_title': '比較見積もりツール',
-        'current_app': 'comparison_tool'
+        'current_app': 'comparison_tool',
+        'comparisons': comparisons
     }
     return render_template('comparison_tool.html', **ctx)
 
