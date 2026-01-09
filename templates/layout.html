@@ -301,11 +301,17 @@
             <ul class="nav flex-column">
                 {% for key, item in nav.items() %}
                     {% if item.get('children') %}
+                        {% set any_child_active = false %}
+                        {% for child in item.children %}
+                            {% if current_app == child.id %}
+                                {% set any_child_active = true %}
+                            {% endif %}
+                        {% endfor %}
                         <li class="nav-item">
-                            <a class="nav-link" href="#{{ key }}" data-bs-toggle="collapse">
+                            <a class="nav-link {% if any_child_active %}active{% endif %}" href="#{{ key }}" data-bs-toggle="collapse" aria-expanded="{% if any_child_active %}true{% else %}false{% endif %}">
                                 {{ item.name }}
                             </a>
-                            <ul class="collapse nav flex-column" id="{{ key }}">
+                            <ul class="collapse{% if any_child_active %} show{% endif %} nav flex-column" id="{{ key }}">
                                 {% for child in item.children %}
                                     <li class="nav-item">
                                         <a class="nav-link {% if current_app == child.id %}active{% endif %}" href="{{ url_for(child.url) }}">

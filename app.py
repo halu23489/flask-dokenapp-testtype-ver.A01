@@ -50,6 +50,19 @@ APP_CONFIG = {
     'app_subtitle': '現場に携わる技術者のための',
     'nav': {
         'home': {'name': '🏠 ホーム', 'url': 'index'},
+        'workmaster': {
+            'name': '📋 歩掛マスター',
+            'children': [
+                {'id': 'workmaster_main', 'name': 'メイン版', 'url': 'workmaster_basic'},
+                {'id': 'workmaster_proto', 'name': 'プロト版', 'url': 'workmaster_proto_basic'},
+            ]
+        },
+        'converter': {'name': '🖼️ HEIC→JPG変換', 'url': 'converter_page'},
+        'unit': {'name': '📏 単位換算', 'url': 'unit_converter_page'},
+        'dxf': {'name': '📐 DXF出力', 'url': 'dxf_tool_page'},
+        'calc': {'name': '🧮 計算ツール', 'url': 'calculator'},
+        'comparison': {'name': '⚖️ 比較見積もり', 'url': 'comparison_tool_page'},
+        'forum': {'name': '💬 詰所（掲示板）', 'url': 'forum'},
     }
 }
 
