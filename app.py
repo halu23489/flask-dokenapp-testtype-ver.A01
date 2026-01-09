@@ -766,11 +766,12 @@ def comparison_tool_page():
     if 'comparisons' not in session:
         session['comparisons'] = []
     
-    comparisons = session['comparisons']
-    
     if request.method == 'POST':
         action = request.form.get('action')
         project_id = request.form.get('project_id', '')
+        
+        # セッションを読み込む
+        comparisons = session.get('comparisons', [])
         
         try:
             project_id = int(project_id)
@@ -789,8 +790,6 @@ def comparison_tool_page():
                     'min_quote': None
                 }
                 comparisons.append(new_project)
-                session['comparisons'] = comparisons
-                session.modified = True
         
         # 見積もり追加
         elif action == 'add_quote' and project_id is not None and 0 <= project_id < len(comparisons):
@@ -840,9 +839,6 @@ def comparison_tool_page():
                         if q['total'] == project['min_cost']:
                             project['min_quote'] = q['name']
                             break
-            
-            session['comparisons'] = comparisons
-            session.modified = True
         
         # 見積もり削除
         elif action == 'delete_quote' and project_id is not None and 0 <= project_id < len(comparisons):
@@ -863,17 +859,19 @@ def comparison_tool_page():
                 else:
                     project['min_cost'] = 0
                     project['min_quote'] = None
-                
-                session['comparisons'] = comparisons
-                session.modified = True
         
         # プロジェクト削除
         elif action == 'delete_project' and project_id is not None and 0 <= project_id < len(comparisons):
             comparisons.pop(project_id)
-            session['comparisons'] = comparisons
-            session.modified = True
+        
+        # セッションに保存
+        session['comparisons'] = comparisons
+        session.modified = True
         
         return redirect(url_for('comparison_tool_page'))
+    
+    # GETリクエスト：セッションからデータを取得
+    comparisons = session.get('comparisons', [])
     
     # テンプレートに渡すデータ
     ctx = {
