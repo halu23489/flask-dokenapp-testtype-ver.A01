@@ -4,3 +4,7 @@ pandas
 XlsxWriter
 openpyxl
 gunicorn
+Pillow
+pillow-heif
+ezdxf
+Flask-Limiter
