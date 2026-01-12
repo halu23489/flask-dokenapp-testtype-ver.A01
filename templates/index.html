@@ -249,6 +249,44 @@
       font-size: 8px;
     }
   }
+
+  /* QR案内カード */
+  .qr-section {
+    margin: 24px auto 32px;
+    max-width: 680px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .qr-section h3 {
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .qr-section p {
+    margin-bottom: 14px;
+    color: #4b5563;
+    font-size: 14px;
+  }
+
+  .qr-image-wrapper {
+    display: inline-flex;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  .qr-image-wrapper img {
+    width: 220px;
+    height: auto;
+    display: block;
+  }
 </style>
 
 <div class="home-container">
@@ -315,6 +353,14 @@
       <div class="app-tile-title" style="color: #bbb;">+</div>
       <p class="app-tile-desc" style="color: #bbb;">追加</p>
     </a>
+  </div>
+
+  <div class="qr-section">
+    <h3>ITショクチョー QR</h3>
+    <p>スマホからもアクセスできます。必要な方にこのQRコードを共有してください。</p>
+    <div class="qr-image-wrapper">
+      <img src="{{ url_for('static', filename='img/ITショクチョーQR.jpg') }}" alt="ITショクチョー QRコード">
+    </div>
   </div>
 </div>
 {% endblock %}
